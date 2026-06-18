@@ -17,17 +17,37 @@ class OperationalPlanController extends Controller
     public function index()
     {
         $plans = OperationalPlan::withCount('tasks')
-            ->orderByRaw("CAST(strftime('%Y', COALESCE(planned_start, created_at)) AS INTEGER) DESC")
-            ->orderBy('title')
+            ->with(['tasks' => fn($q) => $q->select('id','plan_id','status')])
+            ->orderByRaw("CASE status WHEN 'ativo' THEN 0 WHEN 'rascunho' THEN 1 ELSE 2 END")
+            ->orderByDesc('planned_start')
             ->get()
-            ->map(fn($p) => array_merge($p->toArray(), [
-                'year'      => $p->planned_start ? $p->planned_start->year : now()->year,
-                'starts_at' => $p->planned_start,
-                'ends_at'   => $p->planned_end,
-                'progress'  => 0,
-            ]));
+            ->map(fn($p) => [
+                'id'          => $p->id,
+                'title'       => $p->title,
+                'description' => $p->description,
+                'status'      => $p->status,
+                'year'        => $p->planned_start?->year ?? now()->year,
+                'starts_at'   => $p->planned_start,
+                'ends_at'     => $p->planned_end,
+                'tasks_count' => $p->tasks_count,
+                'progress'    => $p->tasks_count > 0
+                    ? (int) round(($p->tasks->where('status','completed')->count() / $p->tasks_count) * 100)
+                    : 0,
+                'tasks_by_status' => $p->tasks->groupBy('status')->map->count(),
+            ]);
 
-        return Inertia::render('Planeamento/Index', ['plans' => $plans]);
+        // Global stats for the dashboard header
+        $stats = [
+            'plans_active'       => OperationalPlan::where('organization_id',1)->where('status','ativo')->count(),
+            'tasks_pending'      => Task::where('organization_id',1)->whereIn('status',['pending','in_progress'])->count(),
+            'pending_validation' => Task::where('organization_id',1)->where('validation_status','pendente')->count(),
+            'space_pending'      => SpaceReservation::where('status','pendente')->count(),
+            'events_this_week'   => Event::where('organization_id',1)
+                ->whereBetween('starts_at',[now()->startOfWeek(), now()->endOfWeek()])
+                ->count(),
+        ];
+
+        return Inertia::render('Planeamento/Index', ['plans' => $plans, 'stats' => $stats]);
     }
 
     public function store(Request $request)
@@ -56,35 +76,55 @@ class OperationalPlanController extends Controller
 
     public function show(OperationalPlan $plan)
     {
-        $plan->load(['tasks' => fn($q) => $q->with('assignee')->orderBy('due_date')]);
-        $data = array_merge($plan->toArray(), [
-            'year'      => $plan->planned_start ? $plan->planned_start->year : now()->year,
-            'starts_at' => $plan->planned_start,
-            'ends_at'   => $plan->planned_end,
-            'progress'  => $plan->tasks->count() > 0
-                ? (int) round(($plan->tasks->where('status','completed')->count() / $plan->tasks->count()) * 100)
-                : 0,
+        $plan->load([
+            'tasks' => fn($q) => $q->with(['assignee','team','checklistItems'])->orderBy('due_date')->orderByDesc('priority'),
         ]);
-        return Inertia::render('Planeamento/Show', ['plan' => $data]);
+
+        // Events linked to this plan (by plan_id on tasks, or events that overlap plan dates)
+        $events = Event::with(['space','creator'])
+            ->where('organization_id', 1)
+            ->when($plan->planned_start && $plan->planned_end, fn($q) =>
+                $q->where('starts_at', '>=', $plan->planned_start)
+                  ->where('starts_at', '<=', $plan->planned_end)
+            )
+            ->orderBy('starts_at')
+            ->limit(20)
+            ->get();
+
+        $tasksByStatus = $plan->tasks->groupBy('status')->map->count();
+        $total         = $plan->tasks->count();
+        $completed     = $plan->tasks->where('status','completed')->count();
+
+        return Inertia::render('Planeamento/Show', [
+            'plan' => array_merge($plan->toArray(), [
+                'year'            => $plan->planned_start?->year ?? now()->year,
+                'starts_at'       => $plan->planned_start,
+                'ends_at'         => $plan->planned_end,
+                'progress'        => $total > 0 ? (int) round(($completed / $total) * 100) : 0,
+                'tasks_by_status' => $tasksByStatus,
+            ]),
+            'events'   => $events,
+            'users'    => User::where('is_active',true)->orderBy('name')->get(['id','name']),
+            'teams'    => Team::where('is_active',true)->orderBy('name')->get(['id','name']),
+        ]);
     }
 
     public function update(Request $request, OperationalPlan $plan)
     {
         $data = $request->validate([
-            'title'       => 'required|string|max:255',
+            'title'       => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'year'        => 'nullable|integer',
             'starts_at'   => 'nullable|date',
             'ends_at'     => 'nullable|date',
             'status'      => 'nullable|in:rascunho,ativo,concluido,cancelado',
         ]);
 
         $plan->update([
-            'title'         => $data['title'],
+            'title'         => $data['title']     ?? $plan->title,
             'description'   => $data['description'] ?? $plan->description,
-            'status'        => $data['status'] ?? $plan->status,
+            'status'        => $data['status']    ?? $plan->status,
             'planned_start' => $data['starts_at'] ?? $plan->planned_start,
-            'planned_end'   => $data['ends_at'] ?? $plan->planned_end,
+            'planned_end'   => $data['ends_at']   ?? $plan->planned_end,
         ]);
 
         return back()->with('message', 'Plano atualizado.');
@@ -96,80 +136,52 @@ class OperationalPlanController extends Controller
         return redirect('/planeamento')->with('message', 'Plano eliminado.');
     }
 
-    // Sub-seccoes do modulo Planeamento
+    // ─── Sub-secções ──────────────────────────────────────────────────────────
 
     public function agenda()
     {
-        $events = Event::with(['space', 'creator'])
+        $events = Event::with(['space','creator','participants'])
+            ->where('organization_id', 1)
             ->where('starts_at', '>=', now()->startOfDay())
             ->orderBy('starts_at')
-            ->limit(50)
-            ->get()
-            ->map(fn($e) => [
-                'id'        => $e->id,
-                'title'     => $e->title,
-                'starts_at' => $e->starts_at,
-                'ends_at'   => $e->ends_at,
-                'type'      => $e->type,
-                'location'  => $e->location,
-                'all_day'   => $e->all_day,
-                'space'     => $e->space ? ['id' => $e->space->id, 'name' => $e->space->name] : null,
-                'creator'   => $e->creator ? ['name' => $e->creator->name] : null,
-            ]);
+            ->limit(60)
+            ->get();
 
-        $reservations = SpaceReservation::with(['space', 'contact', 'user'])
-            ->whereIn('status', ['pendente', 'aprovada'])
+        $reservations = SpaceReservation::with(['space','contact','user'])
+            ->whereIn('status', ['pendente','aprovada'])
             ->where('starts_at', '>=', now()->startOfDay())
             ->orderBy('starts_at')
             ->limit(30)
-            ->get()
-            ->map(fn($r) => [
-                'id'        => $r->id,
-                'title'     => $r->title,
-                'starts_at' => $r->starts_at,
-                'ends_at'   => $r->ends_at,
-                'status'    => $r->status,
-                'space'     => $r->space ? ['name' => $r->space->name] : null,
-                'requester' => $r->contact ? $r->contact->name : ($r->user ? $r->user->name : '--'),
-            ]);
+            ->get();
+
+        // Tasks with upcoming due dates (next 30 days)
+        $tasksDue = Task::with(['assignee','plan'])
+            ->where('organization_id', 1)
+            ->whereNotIn('status', ['completed','cancelled'])
+            ->whereBetween('due_date', [now(), now()->addDays(30)])
+            ->orderBy('due_date')
+            ->limit(30)
+            ->get();
 
         return Inertia::render('Planeamento/Agenda', [
             'events'       => $events,
             'reservations' => $reservations,
+            'tasksDue'     => $tasksDue,
         ]);
     }
 
     public function requisicoes()
     {
-        $spacePending = SpaceReservation::with(['space', 'contact', 'user'])
+        $spacePending = SpaceReservation::with(['space','contact','user'])
             ->where('status', 'pendente')
             ->orderBy('starts_at')
-            ->get()
-            ->map(fn($r) => [
-                'id'        => $r->id,
-                'title'     => $r->title,
-                'purpose'   => $r->purpose,
-                'starts_at' => $r->starts_at,
-                'ends_at'   => $r->ends_at,
-                'space'     => $r->space ? ['name' => $r->space->name] : null,
-                'requester' => $r->contact ? $r->contact->name : ($r->user ? $r->user->name : '--'),
-            ]);
+            ->get();
 
-        $tasksPendingValidation = Task::with(['assignee', 'team', 'materials'])
+        $tasksPendingValidation = Task::with(['assignee','team','materials','plan'])
             ->where('validation_status', 'pendente')
             ->orderBy('due_date')
-            ->limit(30)
-            ->get()
-            ->map(fn($t) => [
-                'id'                => $t->id,
-                'title'             => $t->title,
-                'due_date'          => $t->due_date,
-                'priority'          => $t->priority,
-                'validation_status' => $t->validation_status,
-                'assignee'          => $t->assignee ? ['name' => $t->assignee->name] : null,
-                'team'              => $t->team ? ['name' => $t->team->name] : null,
-                'materials_count'   => $t->materials->count(),
-            ]);
+            ->limit(40)
+            ->get();
 
         return Inertia::render('Planeamento/Requisicoes', [
             'spacePending'           => $spacePending,
@@ -179,44 +191,24 @@ class OperationalPlanController extends Controller
 
     public function recursos()
     {
-        $teams = Team::with(['leader', 'members'])
+        $teams = Team::with(['leader','members.user'])
             ->where('is_active', true)
             ->orderBy('name')
-            ->get()
-            ->map(fn($t) => [
-                'id'            => $t->id,
-                'name'          => $t->name,
-                'type'          => $t->type,
-                'leader'        => $t->leader ? ['name' => $t->leader->name] : null,
-                'members_count' => $t->members->count(),
-            ]);
+            ->get();
 
-        $allocations = MaterialAllocation::with(['item', 'task'])
+        $allocations = MaterialAllocation::with(['item','task'])
             ->where('status', 'em_uso')
-            ->orderByDesc('allocated_at')
+            ->orderByDesc('created_at')
             ->limit(40)
-            ->get()
-            ->map(fn($a) => [
-                'id'                => $a->id,
-                'item'              => $a->item ? ['name' => $a->item->name, 'unit' => $a->item->unit] : null,
-                'quantity'          => $a->quantity,
-                'allocated_to_type' => $a->allocated_to_type,
-                'allocated_to_name' => $a->allocated_to_name,
-                'status'            => $a->status,
-                'allocated_at'      => $a->allocated_at,
-                'task'              => $a->task ? ['id' => $a->task->id, 'title' => $a->task->title] : null,
-            ]);
+            ->get();
 
         $users = User::where('is_active', true)
-            ->withCount(['tasks as open_tasks' => fn($q) => $q->whereIn('status', ['pending','in_progress'])])
+            ->withCount([
+                'tasks as open_tasks'     => fn($q) => $q->whereIn('status',['pending','in_progress']),
+                'tasks as completed_tasks' => fn($q) => $q->where('status','completed'),
+            ])
             ->orderBy('name')
-            ->get()
-            ->map(fn($u) => [
-                'id'         => $u->id,
-                'name'       => $u->name,
-                'email'      => $u->email,
-                'open_tasks' => $u->open_tasks,
-            ]);
+            ->get(['id','name','email']);
 
         return Inertia::render('Planeamento/Recursos', [
             'teams'       => $teams,

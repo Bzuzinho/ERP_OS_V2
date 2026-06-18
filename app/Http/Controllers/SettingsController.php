@@ -19,7 +19,7 @@ class SettingsController extends Controller
 
     public function users()
     {
-        return Inertia::render('Settings/Users', [
+        return Inertia::render('Settings/Index', [
             'users' => User::orderBy('name')->get(['id','name','email','role','is_active','created_at']),
         ]);
     }

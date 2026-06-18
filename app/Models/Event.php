@@ -16,5 +16,6 @@ class Event extends Model
     public function space() { return $this->belongsTo(Space::class); }
     public function reservation() { return $this->belongsTo(SpaceReservation::class, 'space_reservation_id'); }
     public function creator() { return $this->belongsTo(User::class, 'created_by'); }
-    public function tasks() { return $this->hasMany(Task::class); }
+    public function tasks()         { return $this->hasMany(Task::class); }
+    public function participants()  { return $this->hasMany(EventParticipant::class); }
 }

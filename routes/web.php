@@ -55,6 +55,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/tarefas/{task}',                [TaskController::class, 'destroy'])->name('tasks.destroy');
     Route::post('/tarefas/{task}/validar',          [TaskController::class, 'approveTask'])->name('tasks.validate');
     Route::post('/tarefas/{task}/materiais',        [TaskController::class, 'addMaterial'])->name('tasks.materials.store');
+    Route::post('/tarefas/{task}/checklist',                        [TaskController::class, 'storeChecklistItem'])->name('tasks.checklist.store');
+    Route::patch('/tarefas/{task}/checklist/{item}/toggle',         [TaskController::class, 'toggleChecklistItem'])->name('tasks.checklist.toggle');
+    Route::delete('/tarefas/{task}/checklist/{item}',               [TaskController::class, 'destroyChecklistItem'])->name('tasks.checklist.destroy');
 
     // Equipas
     Route::get('/equipas',                          [TeamController::class, 'index'])->name('teams.index');
@@ -82,17 +85,23 @@ Route::middleware('auth')->group(function () {
     Route::delete('/municipes/{contact}',[ContactController::class, 'destroy'])->name('contacts.destroy');
 
     // Agenda
-    Route::get('/agenda',           [EventController::class, 'index'])->name('events.index');
-    Route::post('/agenda',          [EventController::class, 'store'])->name('events.store');
-    Route::patch('/agenda/{event}', [EventController::class, 'update'])->name('events.update');
-    Route::delete('/agenda/{event}',[EventController::class, 'destroy'])->name('events.destroy');
+    Route::get('/agenda',                                                     [EventController::class, 'index'])->name('events.index');
+    Route::post('/agenda',                                                    [EventController::class, 'store'])->name('events.store');
+    Route::get('/agenda/{event}',                                             [EventController::class, 'show'])->name('events.show');
+    Route::patch('/agenda/{event}',                                           [EventController::class, 'update'])->name('events.update');
+    Route::delete('/agenda/{event}',                                          [EventController::class, 'destroy'])->name('events.destroy');
+    Route::post('/agenda/{event}/participantes',                              [EventController::class, 'storeParticipant'])->name('events.participants.store');
+    Route::patch('/agenda/{event}/participantes/{participant}',               [EventController::class, 'updateParticipant'])->name('events.participants.update');
+    Route::delete('/agenda/{event}/participantes/{participant}',              [EventController::class, 'destroyParticipant'])->name('events.participants.destroy');
 
     // Reservas
     Route::get('/reservas',                        [ReservationController::class, 'index'])->name('reservations.index');
     Route::get('/reservas/nova',                   [ReservationController::class, 'create'])->name('reservations.create');
     Route::post('/reservas',                       [ReservationController::class, 'store'])->name('reservations.store');
+    Route::get('/reservas/{reservation}',          [ReservationController::class, 'show'])->name('reservations.show');
     Route::post('/reservas/{reservation}/aprovar', [ReservationController::class, 'approve'])->name('reservations.approve');
     Route::post('/reservas/{reservation}/rejeitar',[ReservationController::class, 'reject'])->name('reservations.reject');
+    Route::delete('/reservas/{reservation}',       [ReservationController::class, 'destroy'])->name('reservations.destroy');
 
     // Espaços
     Route::get('/espacos',            [SpaceController::class, 'index'])->name('spaces.index');
@@ -150,15 +159,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/notificacoes',                    [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notificacoes/marcar-todas',      [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
     Route::post('/notificacoes/{recipient}/lida',  [NotificationController::class, 'markRead'])->name('notifications.read');
-
-    // Munícipes / Pessoas
-    Route::get('/municipes',             [ContactController::class, 'index'])->name('contacts.index');
-    Route::get('/municipes/novo',        [ContactController::class, 'create'])->name('contacts.create');
-    Route::post('/municipes',            [ContactController::class, 'store'])->name('contacts.store');
-    Route::get('/municipes/{contact}',   [ContactController::class, 'show'])->name('contacts.show');
-    Route::get('/municipes/{contact}/edit', [ContactController::class, 'edit'])->name('contacts.edit');
-    Route::patch('/municipes/{contact}', [ContactController::class, 'update'])->name('contacts.update');
-    Route::delete('/municipes/{contact}',[ContactController::class, 'destroy'])->name('contacts.destroy');
 
     // Configurações
     Route::get('/configuracoes',          [SettingsController::class, 'index'])->name('settings.index');

@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
 use App\Models\MaterialAllocation;
+use App\Models\OperationalPlan;
 use App\Models\ServiceArea;
 use App\Models\Task;
+use App\Models\TaskChecklistItem;
 use App\Models\TaskMaterial;
 use App\Models\Team;
-use App\Models\OperationalPlan;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,18 +21,24 @@ class TaskController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Task::with(['assignee','serviceArea','ticket','team','plan'])
+        $query = Task::with(['assignee','serviceArea','ticket','team','plan','checklistItems'])
             ->orderBy('due_date')
             ->orderByDesc('created_at');
 
         if ($request->filled('status'))            $query->where('status', $request->status);
+        if ($request->filled('priority'))          $query->where('priority', $request->priority);
         if ($request->filled('validation_status')) $query->where('validation_status', $request->validation_status);
         if ($request->filled('team_id'))           $query->where('team_id', $request->team_id);
+        if ($request->filled('assigned_to'))       $query->where('assigned_to', $request->assigned_to);
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(fn($q) => $q->where('title','like',"%$s%")->orWhere('description','like',"%$s%"));
+        }
 
         return Inertia::render('Tasks/Index', [
-            'tasks'   => $query->paginate(20)->withQueryString(),
-            'filters' => $request->only(['status','validation_status','team_id']),
-            'users'   => User::where('is_active', true)->get(['id','name']),
+            'tasks'   => $query->paginate(25)->withQueryString(),
+            'filters' => $request->only(['status','priority','validation_status','team_id','assigned_to','search']),
+            'users'   => User::where('is_active', true)->orderBy('name')->get(['id','name']),
             'teams'   => Team::where('is_active', true)->orderBy('name')->get(['id','name','type']),
         ]);
     }
@@ -63,6 +70,8 @@ class TaskController extends Controller
             'due_date'          => 'nullable|date',
             'service_area_id'   => 'nullable|exists:service_areas,id',
             'validation_status' => 'in:nao_aplicavel,pendente,validado,rejeitado',
+            'checklist'         => 'nullable|array',
+            'checklist.*.title' => 'required|string|max:255',
             'materials'         => 'nullable|array',
             'materials.*.inventory_item_id' => 'exists:inventory_items,id',
             'materials.*.quantity'          => 'numeric|min:0.001',
@@ -70,25 +79,36 @@ class TaskController extends Controller
         ]);
 
         DB::transaction(function () use ($validated) {
-            $taskData = array_diff_key($validated, ['materials' => null]);
+            $taskData = array_diff_key($validated, array_flip(['materials','checklist']));
             $task = Task::create(array_merge($taskData, [
                 'created_by'      => Auth::id(),
                 'organization_id' => 1,
             ]));
 
-            if (!empty($validated['materials'])) {
-                foreach ($validated['materials'] as $m) {
-                    TaskMaterial::create(array_merge($m, ['task_id' => $task->id]));
-                }
+            foreach ($validated['checklist'] ?? [] as $i => $item) {
+                TaskChecklistItem::create([
+                    'task_id'    => $task->id,
+                    'title'      => $item['title'],
+                    'sort_order' => $i,
+                ]);
+            }
+
+            foreach ($validated['materials'] ?? [] as $m) {
+                TaskMaterial::create(array_merge($m, ['task_id' => $task->id]));
             }
         });
 
-        return redirect()->route('tasks.index')->with('message', 'Tarefa criada com sucesso.');
+        return redirect('/tarefas')->with('message', 'Tarefa criada com sucesso.');
     }
 
     public function show(Task $task)
     {
-        $task->load(['assignee','serviceArea','ticket','team','plan','materials.item','allocations.item']);
+        $task->load([
+            'assignee','serviceArea','ticket','team','plan',
+            'materials.item','allocations.item',
+            'checklistItems','creator','validator',
+        ]);
+
         return Inertia::render('Tasks/Show', [
             'task'      => $task,
             'users'     => User::where('is_active', true)->orderBy('name')->get(['id','name']),
@@ -100,11 +120,15 @@ class TaskController extends Controller
     public function edit(Task $task)
     {
         return Inertia::render('Tasks/Edit', [
-            'task'      => $task->load(['materials.item']),
-            'users'     => User::where('is_active', true)->orderBy('name')->get(['id','name']),
-            'teams'     => Team::where('is_active', true)->orderBy('name')->get(['id','name','type']),
-            'inventory' => InventoryItem::where('is_active', true)->orderBy('name')
-                            ->get(['id','name','unit','item_type','current_stock']),
+            'task'         => $task->load(['materials.item','checklistItems']),
+            'users'        => User::where('is_active', true)->orderBy('name')->get(['id','name']),
+            'teams'        => Team::where('is_active', true)->orderBy('name')->get(['id','name','type']),
+            'serviceAreas' => ServiceArea::where('is_active', true)->get(['id','name']),
+            'plans'        => OperationalPlan::where('organization_id', 1)
+                                ->whereIn('status', ['rascunho','ativo'])
+                                ->orderBy('title')->get(['id','title']),
+            'inventory'    => InventoryItem::where('is_active', true)->orderBy('name')
+                                ->get(['id','name','unit','item_type','current_stock']),
         ]);
     }
 
@@ -117,7 +141,9 @@ class TaskController extends Controller
             'priority'          => 'sometimes|in:low,medium,high',
             'assigned_to'       => 'nullable|exists:users,id',
             'team_id'           => 'nullable|exists:teams,id',
+            'plan_id'           => 'nullable|exists:operational_plans,id',
             'due_date'          => 'nullable|date',
+            'service_area_id'   => 'nullable|exists:service_areas,id',
             'validation_status' => 'sometimes|in:nao_aplicavel,pendente,validado,rejeitado',
             'rejection_reason'  => 'nullable|string',
         ]);
@@ -126,7 +152,40 @@ class TaskController extends Controller
         return back()->with('message', 'Tarefa atualizada.');
     }
 
-    /** Validar tarefa: aplica consumo/alocação de materiais */
+    // ─── Checklist ────────────────────────────────────────────────────────────
+
+    public function storeChecklistItem(Request $request, Task $task)
+    {
+        $data = $request->validate(['title' => 'required|string|max:255']);
+        $max = $task->checklistItems()->max('sort_order') ?? -1;
+        TaskChecklistItem::create([
+            'task_id'    => $task->id,
+            'title'      => $data['title'],
+            'sort_order' => $max + 1,
+        ]);
+        return back()->with('message', 'Item adicionado.');
+    }
+
+    public function toggleChecklistItem(Task $task, TaskChecklistItem $item)
+    {
+        abort_unless($item->task_id === $task->id, 403);
+        $item->update([
+            'is_completed' => !$item->is_completed,
+            'completed_by' => !$item->is_completed ? Auth::id() : null,
+            'completed_at' => !$item->is_completed ? now() : null,
+        ]);
+        return back();
+    }
+
+    public function destroyChecklistItem(Task $task, TaskChecklistItem $item)
+    {
+        abort_unless($item->task_id === $task->id, 403);
+        $item->delete();
+        return back()->with('message', 'Item removido.');
+    }
+
+    // ─── Validação ────────────────────────────────────────────────────────────
+
     public function approveTask(Request $request, Task $task)
     {
         $request->validate([
@@ -146,7 +205,6 @@ class TaskController extends Controller
                 foreach ($task->materials as $tm) {
                     $item = $tm->item;
                     if (!$item) continue;
-
                     if ($tm->usage_type === 'consumido' && $item->isConsumivel()) {
                         $item->decrement('current_stock', $tm->quantity);
                         InventoryMovement::create([
@@ -173,14 +231,11 @@ class TaskController extends Controller
             }
         });
 
-        $msg = $request->action === 'validado'
-            ? 'Tarefa validada e materiais processados.'
-            : 'Tarefa rejeitada.';
-
-        return back()->with('flash', ['success' => $msg]);
+        return back()->with('message',
+            $request->action === 'validado' ? 'Tarefa validada.' : 'Tarefa rejeitada.'
+        );
     }
 
-    /** Adicionar material a tarefa existente */
     public function addMaterial(Request $request, Task $task)
     {
         $data = $request->validate([
@@ -189,18 +244,16 @@ class TaskController extends Controller
             'usage_type'        => 'required|in:consumido,utilizado,alocado',
             'notes'             => 'nullable|string',
         ]);
-
         TaskMaterial::updateOrCreate(
             ['task_id' => $task->id, 'inventory_item_id' => $data['inventory_item_id']],
             $data + ['task_id' => $task->id]
         );
-
-        return back()->with('flash', ['success' => 'Material adicionado.']);
+        return back()->with('message', 'Material adicionado.');
     }
 
     public function destroy(Task $task)
     {
         $task->delete();
-        return redirect()->route('tasks.index')->with('message', 'Tarefa eliminada.');
+        return redirect('/tarefas')->with('message', 'Tarefa eliminada.');
     }
 }

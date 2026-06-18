@@ -152,7 +152,11 @@ export default function EquipasIndex({ teams, users }: any) {
                     <span><Users size={10} className="inline"/> {team.members_count} membro{team.members_count !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
-                <ChevronRight size={16} className={clsx('text-gray-400 transition-transform', expandedTeam === team.id && 'rotate-90')}/>
+                <a href={`/equipas/${team.id}`} onClick={e => e.stopPropagation()}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex-shrink-0"
+                  title="Ver detalhes">
+                  <ChevronRight size={16}/>
+                </a>
               </div>
 
               {/* Expanded: membros */}

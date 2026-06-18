@@ -53,4 +53,5 @@ class Task extends Model
     public function validator()    { return $this->belongsTo(User::class, 'validated_by'); }
     public function materials()    { return $this->hasMany(TaskMaterial::class); }
     public function allocations()  { return $this->hasMany(MaterialAllocation::class); }
+    public function checklistItems() { return $this->hasMany(TaskChecklistItem::class)->orderBy('sort_order')->orderBy('id'); }
 }

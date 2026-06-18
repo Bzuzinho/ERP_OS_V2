@@ -65,6 +65,37 @@ class ReservationController extends Controller
         return redirect()->route('reservations.index')->with('message', 'Reserva criada e aguarda aprovação.');
     }
 
+    public function show(SpaceReservation $reservation)
+    {
+        $reservation->load(['space','contact','user','reviewer','event','tasks.assignee']);
+
+        return Inertia::render('Reservations/Show', [
+            'reservation' => [
+                'id'                 => $reservation->id,
+                'title'              => $reservation->title,
+                'purpose'            => $reservation->purpose,
+                'status'             => $reservation->status,
+                'rejection_reason'   => $reservation->rejection_reason,
+                'starts_at'          => $reservation->starts_at,
+                'ends_at'            => $reservation->ends_at,
+                'expected_attendees' => $reservation->expected_attendees,
+                'space'              => $reservation->space ? ['id'=>$reservation->space->id,'name'=>$reservation->space->name,'location'=>$reservation->space->location ?? null] : null,
+                'contact'            => $reservation->contact ? ['id'=>$reservation->contact->id,'name'=>$reservation->contact->name,'email'=>$reservation->contact->email ?? null] : null,
+                'user'               => $reservation->user ? ['id'=>$reservation->user->id,'name'=>$reservation->user->name] : null,
+                'reviewer'           => $reservation->reviewer ? ['id'=>$reservation->reviewer->id,'name'=>$reservation->reviewer->name] : null,
+                'reviewed_at'        => $reservation->reviewed_at,
+                'event'              => $reservation->event ? ['id'=>$reservation->event->id,'title'=>$reservation->event->title] : null,
+                'tasks'              => $reservation->tasks->map(fn($t) => [
+                    'id'       => $t->id,
+                    'title'    => $t->title,
+                    'status'   => $t->status,
+                    'assignee' => $t->assignee ? ['name'=>$t->assignee->name] : null,
+                ]),
+                'created_at'         => $reservation->created_at,
+            ],
+        ]);
+    }
+
     public function approve(SpaceReservation $reservation)
     {
         $reservation->update([
@@ -111,5 +142,11 @@ class ReservationController extends Controller
             'reviewed_at'      => now(),
         ]);
         return back()->with('message', 'Reserva rejeitada.');
+    }
+
+    public function destroy(SpaceReservation $reservation)
+    {
+        $reservation->update(['status' => 'cancelada']);
+        return redirect('/reservas')->with('message', 'Reserva cancelada.');
     }
 }

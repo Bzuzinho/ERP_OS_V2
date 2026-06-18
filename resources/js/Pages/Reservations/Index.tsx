@@ -61,7 +61,9 @@ export default function ReservationsIndex({ reservations, spaces, filters }: any
               <tbody className="divide-y divide-gray-50">
                 {(reservations?.data ?? []).map((r: any) => (
                   <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-800">{r.title}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800">
+                      <a href={`/reservas/${r.id}`} className="hover:text-primary-600 hover:underline">{r.title}</a>
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{r.space?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{r.contact?.name ?? r.user?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{new Date(r.starts_at).toLocaleString('pt-PT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
