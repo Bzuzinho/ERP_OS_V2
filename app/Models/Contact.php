@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Contact extends Model
+{
+    protected $fillable = [
+        'organization_id', 'user_id', 'person_type_id',
+        'name', 'email', 'phone', 'mobile', 'nif',
+        'address', 'postal_code', 'locality', 'birthdate',
+        'type', 'notes', 'avatar', 'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'birthdate'  => 'date',
+    ];
+
+    public function organization() { return $this->belongsTo(Organization::class); }
+    public function user()         { return $this->belongsTo(User::class); }
+    public function personType()   { return $this->belongsTo(PersonType::class); }
+    public function tickets()      { return $this->hasMany(Ticket::class); }
+    public function reservations() { return $this->hasMany(SpaceReservation::class); }
+
+    public function getDisplayTypeAttribute(): string
+    {
+        return $this->personType?->name ?? $this->type ?? 'outro';
+    }
+
+    public function getDisplayColorAttribute(): string
+    {
+        return $this->personType?->color ?? '#6b7280';
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar ? asset('storage/' . $this->avatar) : null;
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        $parts = explode(' ', trim($this->name));
+        if (count($parts) >= 2) return strtoupper($parts[0][0] . $parts[count($parts)-1][0]);
+        return strtoupper(substr($this->name, 0, 2));
+    }
+}

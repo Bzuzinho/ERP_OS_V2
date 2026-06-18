@@ -1,0 +1,75 @@
+import React from 'react'
+import { Head, useForm, Link } from '@inertiajs/react'
+import AdminLayout from '@/Layouts/AdminLayout'
+import { ArrowLeft } from 'lucide-react'
+
+export default function TaskEdit({ task, users }: any) {
+  const { data, setData, patch, processing } = useForm({
+    title: task.title, description: task.description ?? '',
+    priority: task.priority, status: task.status,
+    assigned_to: task.assigned_to ?? '', due_date: task.due_date?.slice(0,16) ?? '',
+  })
+
+  return (
+    <AdminLayout title="Editar Tarefa">
+      <Head title="Editar Tarefa" />
+      <div className="p-6 max-w-2xl mx-auto">
+        <Link href={`/tarefas/${task.id}`} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"><ArrowLeft size={16} /> Voltar</Link>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-6">Editar Tarefa</h2>
+          <form onSubmit={e => { e.preventDefault(); patch(`/tarefas/${task.id}`) }} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+              <input type="text" value={data.title} onChange={e => setData('title', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+              <textarea value={data.description} onChange={e => setData('description', e.target.value)} rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                <select value={data.status} onChange={e => setData('status', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                  <option value="pending">Pendente</option><option value="in_progress">Em progresso</option>
+                  <option value="completed">Concluída</option><option value="cancelled">Cancelada</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+                <select value={data.priority} onChange={e => setData('priority', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                  <option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Responsável</label>
+                <select value={data.assigned_to} onChange={e => setData('assigned_to', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                  <option value="">Não atribuído</option>
+                  {users?.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data limite</label>
+                <input type="datetime-local" value={data.due_date} onChange={e => setData('due_date', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="submit" disabled={processing}
+                className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium disabled:opacity-60 transition-colors">
+                {processing ? 'A guardar...' : 'Guardar'}
+              </button>
+              <Link href={`/tarefas/${task.id}`} className="px-6 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">Cancelar</Link>
+            </div>
+          </form>
+        </div>
+      </div>
+    </AdminLayout>
+  )
+}

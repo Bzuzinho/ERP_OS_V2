@@ -1,0 +1,112 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "Junta Operacional"
+    }
+  ],
+  "settings": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2,
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/vendor": true,
+      "**/.git": true,
+      "**/.env": true,
+      "**/storage": true,
+      "**/*.sqlite": true
+    },
+    "[php]": {
+      "editor.defaultFormatter": "bmewburn.vscode-intelephense-client",
+      "editor.formatOnSave": true
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/vendor": true,
+      "**/.git": true,
+      "**/storage": true,
+      "**/dist": true,
+      "**/build": true
+    },
+    "emmet.includeLanguages": {
+      "blade": "html"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "intelephense.intelephense",
+      "bmewburn.vscode-intelephense-client",
+      "esbenp.prettier-vscode",
+      "bradlc.vscode-tailwindcss",
+      "dsznajder.es7-react-js-snippets",
+      "dbaeumer.vscode-eslint",
+      "ms-vscode.makefile-tools",
+      "jneumann.everforest",
+      "formulahendry.code-runner"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Listen for XDebug",
+        "type": "php",
+        "port": 9003,
+        "pathMapping": {
+          "/var/www/html": "${workspaceFolder}"
+        }
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Laravel serve",
+        "type": "shell",
+        "command": "php",
+        "args": [
+          "artisan",
+          "serve"
+        ],
+        "isBackground": true,
+        "presentation": {
+          "reveal": "always"
+        },
+        "problemMatcher": {
+          "pattern": {
+            "regexp": "^(?:.*)?\\b(\\w+).*\\b(?:\\[|\\()(\\d+)(?:\\:|,)(\\d+)(?:\\)|\\])",
+            "line": 2,
+            "column": 3,
+            "message": 1
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^.*Laravel development server started.*$",
+            "endsPattern": "^.*$"
+          }
+        }
+      },
+      {
+        "label": "npm run dev",
+        "type": "shell",
+        "command": "npm",
+        "args": [
+          "run",
+          "dev"
+        ],
+        "isBackground": true,
+        "presentation": {
+          "reveal": "always"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,284 @@
+<mxfile host="drawio" modified="2026-05-13T10:30:00Z" agent="Claude" version="20.0.0" etag="test" type="device" pages="7">
+  <diagram id="page1" name="1. Login Flow">
+    <mxGraphModel dx="1200" dy="800" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" value="Utilizador&#xa;Inicia App" style="ellipse;whiteSpace=wrap;html=1;fillColor=#3DD68C;fontColor=#081810;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="450" y="50" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="renderLogin()&#xa;Mostra contas demo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA8FF;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="150" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="Seleciona Conta" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFD166;fontColor=#081810;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="260" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="doLogin()&#xa;state.user = selected" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA8FF;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="370" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="render()&#xa;Show Dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA8FF;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="480" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="7" value="App Ready ✓" style="ellipse;whiteSpace=wrap;html=1;fillColor=#3DD68C;fontColor=#081810;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="450" y="590" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="5" target="6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="6" target="7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page2" name="2. Task Creation Flow">
+    <mxGraphModel dx="1200" dy="800" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" value="Click (+) Button" style="ellipse;whiteSpace=wrap;html=1;fillColor=#3DD68C;fontColor=#081810;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="450" y="50" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="Open Modal Sheet&#xa;Form" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF8C42;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="150" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="Fill Form&#xa;Title, Description,&#xa;Date, Priority" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFD166;fontColor=#081810;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="430" y="260" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="Submit &amp; Validate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF8C42;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="380" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="state.tasks.push()&#xa;Add new task" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA8FF;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="490" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="7" value="render()&#xa;Update Display" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA8FF;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="600" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="8" value="Task Created ✓" style="ellipse;whiteSpace=wrap;html=1;fillColor=#3DD68C;fontColor=#081810;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="450" y="710" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="5" target="6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="6" target="7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="7" target="8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page3" name="3. Task States">
+    <mxGraphModel dx="1200" dy="800" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" value="PENDING" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B57BFF;fontColor=#FFFFFF;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="500" y="100" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="IN PROGRESS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFD166;fontColor=#081810;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="500" y="220" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="VALIDATING" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF8C42;fontColor=#FFFFFF;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="500" y="340" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="COMPLETED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DD68C;fontColor=#081810;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="500" y="460" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="CANCELLED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF4D6D;fontColor=#FFFFFF;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="200" y="280" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;curved=1;html=1;" edge="1" parent="1" source="2" target="6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;curved=1;html=1;" edge="1" parent="1" source="3" target="6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;curved=1;html=1;" edge="1" parent="1" source="4" target="6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page4" name="4. Database Schema">
+    <mxGraphModel dx="1200" dy="800" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" value="USERS" style="rectangle;fillColor=#2E75B6;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="150" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="id (PK)&#xa;name&#xa;email (UNIQUE)&#xa;password&#xa;department" style="rectangle;fillColor=#E8F4F8;fontColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="100" y="130" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="TASKS" style="rectangle;fillColor=#2E75B6;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="450" y="100" width="150" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="id (PK)&#xa;title&#xa;status&#xa;priority&#xa;assigned_to (FK)&#xa;due_date" style="rectangle;fillColor=#E8F4F8;fontColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="450" y="130" width="150" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="REQUESTS&#xa;(future)" style="rectangle;fillColor=#999999;fontColor=#FFFFFF;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="800" y="100" width="150" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="7" value="id (PK)&#xa;reference&#xa;title&#xa;type&#xa;status&#xa;assigned_to (FK)" style="rectangle;fillColor=#F0F0F0;fontColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="800" y="130" width="150" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel1" edge="1" parent="1" source="3" target="5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="250" y="180" as="sourcePoint"/>
+            <mxPoint x="450" y="180" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel2" edge="1" parent="1" source="3" target="7">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="250" y="180" as="sourcePoint"/>
+            <mxPoint x="800" y="180" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page5" name="5. Permissions Flow">
+    <mxGraphModel dx="1200" dy="800" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="1"/>
+        <mxCell id="2" value="User Login" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFD166;fontColor=#081810;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="480" y="50" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="isAdmin(user)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FF8C42;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="450" y="150" width="180" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="ADMIN Dashboard&#xa;(6 panels)&#xa;Full Permissions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DD68C;fontColor=#081810;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="300" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="WORKER Dashboard&#xa;(Limited)&#xa;Read-only most" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA8FF;fontColor=#FFFFFF;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="650" y="300" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="250" as="sourcePoint"/>
+            <mxPoint x="275" y="300" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="3" target="5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="630" y="250" as="sourcePoint"/>
+            <mxPoint x="725" y="300" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page6" name="6. Application Lifecycle">
+    <mxGraphModel dx="1200" dy="800" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" value="1. BOOT&#xa;Init state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DD68C;fontColor=#081810;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="450" y="50" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="2. render()&#xa;Display view" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA8FF;fontColor=#FFFFFF;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="300" y="160" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="3. User Action&#xa;(click, type...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFD166;fontColor=#081810;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="270" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="4. Modify state&#xa;(state.x = value)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF8C42;fontColor=#FFFFFF;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="380" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="5. render()&#xa;Update display" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA8FF;fontColor=#FFFFFF;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="300" y="470" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="7" value="6. Loop..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B57BFF;fontColor=#FFFFFF;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="500" y="380" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="5" target="6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="6" target="7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" style="curved=1;html=1;" edge="1" parent="1" source="7" target="3">
+          <mxGeometry relative="1" as="geometry">
+            <mxArray as="points">
+              <mxPoint x="560" y="200"/>
+            </mxArray>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page7" name="7. Architecture">
+    <mxGraphModel dx="1200" dy="800" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" value="FRONTEND&#xa;app.blade.php" style="rectangle;fillColor=#E3F2FD;fontColor=#1565C0;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="350" y="50" width="300" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="HTML+CSS | JavaScript State | render() Functions" style="rectangle;fillColor=#BBDEFB;fontColor=#0D47A1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="160" width="300" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="BACKEND&#xa;Laravel 11" style="rectangle;fillColor=#F3E5F5;fontColor=#6A1B9A;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="350" y="280" width="300" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="Routes | Controllers | Models | Middleware" style="rectangle;fillColor=#E1BEE7;fontColor=#512DA8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="390" width="300" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="DATABASE&#xa;SQLite" style="rectangle;fillColor=#FCE4EC;fontColor=#C2185B;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="350" y="510" width="300" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="7" value="users | tasks | requests | events | inventory" style="rectangle;fillColor=#F48FB1;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="620" width="300" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" style="html=1;" edge="1" parent="1" source="3" target="5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" style="html=1;" edge="1" parent="1" source="5" target="7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

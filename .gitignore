@@ -1,0 +1,44 @@
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/bootstrap/cache
+.env
+.env.backup
+.env.production.local
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+.DS_Store
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.venv
+venv/
+dist/
+build/
+.cache/
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+
+# Laravel vendor (instalado via composer)
+/vendor/
+
+# SQLite database (local apenas)
+/database/*.sqlite
+/database/*.sqlite-journal
+/database/*.sqlite-shm
+/database/*.sqlite-wal
+
+# Storage uploads (ficheiros locais)
+/storage/app/public/
+/storage/logs/
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
