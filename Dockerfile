@@ -1,5 +1,6 @@
 FROM php:8.3-cli-alpine
 
+# v2 — sem extensoes built-in (tokenizer/ctype/fileinfo ja incluidas no PHP)
 # Dependências do sistema para extensões PHP
 RUN apk add --no-cache \
     postgresql-dev \
