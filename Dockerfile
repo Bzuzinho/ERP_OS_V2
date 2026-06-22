@@ -66,8 +66,9 @@ RUN mkdir -p storage/framework/{cache,sessions,views} \
 EXPOSE 8000
 
 CMD sh -c "php artisan migrate --force \
-  && mkdir -p /app/storage/framework/{cache,sessions,views} /app/bootstrap/cache \
+  && mkdir -p /app/storage/framework/{cache,sessions,views} /app/bootstrap/cache /app/storage/app/public \
   && chmod -R 775 /app/storage /app/bootstrap/cache \
+  && php artisan storage:link --force 2>/dev/null || true \
   && php artisan config:cache \
   && php artisan route:cache \
   && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"

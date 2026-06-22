@@ -227,7 +227,32 @@ class SettingsController extends Controller
         if ($user->id === Auth::id()) {
             return back()->withErrors(['error' => 'Não podes eliminar a tua própria conta.']);
         }
-        $user->delete();
+
+        try {
+            // Desligar pessoa associada
+            \App\Models\Contact::where('user_id', $user->id)->update(['user_id' => null]);
+
+            // Nullify FK references that don't auto-nullify
+            \Illuminate\Support\Facades\DB::table('tickets')->where('created_by', $user->id)->update(['created_by' => null]);
+            \Illuminate\Support\Facades\DB::table('tickets')->where('assigned_to', $user->id)->update(['assigned_to' => null]);
+            \Illuminate\Support\Facades\DB::table('tasks')->where('created_by', $user->id)->update(['created_by' => null]);
+            \Illuminate\Support\Facades\DB::table('tasks')->where('assigned_to', $user->id)->update(['assigned_to' => null]);
+            \Illuminate\Support\Facades\DB::table('tasks')->where('validated_by', $user->id)->update(['validated_by' => null]);
+            \Illuminate\Support\Facades\DB::table('events')->where('created_by', $user->id)->update(['created_by' => null]);
+            \Illuminate\Support\Facades\DB::table('documents')->where('created_by', $user->id)->update(['created_by' => null]);
+            \Illuminate\Support\Facades\DB::table('documents')->where('approved_by', $user->id)->update(['approved_by' => null]);
+            \Illuminate\Support\Facades\DB::table('operational_plans')->where('created_by', $user->id)->update(['created_by' => null]);
+            \Illuminate\Support\Facades\DB::table('operational_plans')->where('manager_id', $user->id)->update(['manager_id' => null]);
+            \Illuminate\Support\Facades\DB::table('space_reservations')->where('reviewed_by', $user->id)->update(['reviewed_by' => null]);
+            \Illuminate\Support\Facades\DB::table('conversation_participants')->where('user_id', $user->id)->delete();
+            \Illuminate\Support\Facades\DB::table('messages')->where('user_id', $user->id)->update(['user_id' => null]);
+            \Illuminate\Support\Facades\DB::table('conversations')->where('created_by', $user->id)->update(['created_by' => 1]);
+
+            $user->delete();
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Não foi possível eliminar: ' . $e->getMessage()]);
+        }
+
         return back()->with('message', 'Utilizador eliminado.');
     }
 
