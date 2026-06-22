@@ -81,7 +81,7 @@ class DatabaseSeeder extends Seeder
             'organization_id' => $oid,
             'name'     => 'Paulo Marques',
             'password' => Hash::make('password'),
-            'role'     => 'visualizador',
+            'role'     => 'manutencao',
             'is_active'=> true,
         ]);
 
