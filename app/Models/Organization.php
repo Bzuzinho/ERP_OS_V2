@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Organization extends Model
 {
@@ -18,7 +19,18 @@ class Organization extends Model
         'heading_color','text_color','menu_text_color',
     ];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts    = ['is_active' => 'boolean'];
+    protected $appends  = ['logo_url', 'logo_secondary_url'];
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        return $this->logo ? Storage::disk('public')->url($this->logo) : null;
+    }
+
+    public function getLogoSecondaryUrlAttribute(): ?string
+    {
+        return $this->logo_secondary ? Storage::disk('public')->url($this->logo_secondary) : null;
+    }
 
     public function users() { return $this->hasMany(User::class); }
     public function rolePermissions() { return $this->hasMany(RolePermission::class); }

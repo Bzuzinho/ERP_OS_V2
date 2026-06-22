@@ -545,7 +545,7 @@ export default function TicketShow({ ticket, users, serviceAreas, teams, contact
                     <p className="text-xs text-gray-400">{fmtBytes(a.size)} · {a.user?.name} · {fmt(a.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <a href={`/storage/${a.filename}`} target="_blank" rel="noreferrer"
+                    <a href={a.url ?? `/storage/${a.filename}`} target="_blank" rel="noreferrer"
                       className="text-xs text-primary-600 hover:underline">Abrir</a>
                     <button onClick={() => router.delete(`/pedidos/${ticket.id}/anexos/${a.id}`)}
                       className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors">

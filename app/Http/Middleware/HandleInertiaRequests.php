@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\RolePermission;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -37,8 +38,8 @@ class HandleInertiaRequests extends Middleware
             // Dados da instituicao partilhados globalmente
             'organization' => fn () => $org ? [
                 'name'            => $org->name,
-                'logo'            => $org->logo           ? asset('storage/' . $org->logo)           : null,
-                'logo_secondary'  => $org->logo_secondary ? asset('storage/' . $org->logo_secondary) : null,
+                'logo'            => $org->logo           ? Storage::disk('public')->url($org->logo)           : null,
+                'logo_secondary'  => $org->logo_secondary ? Storage::disk('public')->url($org->logo_secondary) : null,
                 'primary_color'   => $org->primary_color   ?? '#4f46e5',
                 'accent_color'    => $org->accent_color    ?? '#7c3aed',
                 'sidebar_color'   => $org->sidebar_color   ?? '#0f172a',

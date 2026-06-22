@@ -19,6 +19,7 @@ interface Org {
   sidebar_color?: string; header_color?: string; page_bg_color?: string
   card_bg_color?: string; heading_color?: string; text_color?: string; menu_text_color?: string
   logo?: string; logo_secondary?: string
+  logo_url?: string | null; logo_secondary_url?: string | null
 }
 interface UserRow { id: number; name: string; email: string; role: string; is_active: boolean; created_at: string; contact?: any }
 type PermMatrix = Record<string, Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }>>
@@ -159,9 +160,8 @@ function LogotiposForm({ org }: { org: Org | null }) {
   const logoRef  = useRef<HTMLInputElement>(null)
   const logo2Ref = useRef<HTMLInputElement>(null)
 
-  const toUrl = (path?: string | null) => path ? `/storage/${path}` : null
-  const [logoPreview,  setLogoPreview]  = useState<string | null>(toUrl(org?.logo))
-  const [logo2Preview, setLogo2Preview] = useState<string | null>(toUrl(org?.logo_secondary))
+  const [logoPreview,  setLogoPreview]  = useState<string | null>(org?.logo_url ?? null)
+  const [logo2Preview, setLogo2Preview] = useState<string | null>(org?.logo_secondary_url ?? null)
   const [logoFile,     setLogoFile]     = useState<File | null>(null)
   const [logo2File,    setLogo2File]    = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
