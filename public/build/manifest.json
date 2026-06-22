@@ -1,0 +1,79 @@
+{
+  "_MainLayout-Cv14o4ov.js": {
+    "file": "assets/MainLayout-Cv14o4ov.js",
+    "name": "MainLayout",
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-BuWTRRt3.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/Pages/404.tsx": {
+    "file": "assets/404-0x3Pkf-a.js",
+    "name": "404",
+    "src": "resources/js/Pages/404.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Dashboard.tsx": {
+    "file": "assets/Dashboard-DNQ0NrIY.js",
+    "name": "Dashboard",
+    "src": "resources/js/Pages/Dashboard.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_MainLayout-Cv14o4ov.js"
+    ]
+  },
+  "resources/js/Pages/Orders/Index.tsx": {
+    "file": "assets/Index-DKiJXOxd.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Orders/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_MainLayout-Cv14o4ov.js"
+    ]
+  },
+  "resources/js/Pages/Settings/Index.tsx": {
+    "file": "assets/Index-BeiOvbup.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Settings/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_MainLayout-Cv14o4ov.js"
+    ]
+  },
+  "resources/js/Pages/Tasks/Index.tsx": {
+    "file": "assets/Index-ChZ4Ar5u.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Tasks/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_MainLayout-Cv14o4ov.js"
+    ]
+  },
+  "resources/js/app.tsx": {
+    "file": "assets/app-CIoQXlZ6.js",
+    "name": "app",
+    "src": "resources/js/app.tsx",
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/Pages/404.tsx",
+      "resources/js/Pages/Dashboard.tsx",
+      "resources/js/Pages/Orders/Index.tsx",
+      "resources/js/Pages/Settings/Index.tsx",
+      "resources/js/Pages/Tasks/Index.tsx"
+    ],
+    "css": [
+      "assets/app-BuWTRRt3.css"
+    ]
+  }
+}

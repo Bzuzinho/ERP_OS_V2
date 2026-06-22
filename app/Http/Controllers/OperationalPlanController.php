@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Contact;
 use App\Models\Event;
 use App\Models\MaterialAllocation;
 use App\Models\OperationalPlan;
+use App\Models\Space;
 use App\Models\SpaceReservation;
 use App\Models\Task;
 use App\Models\Team;
@@ -80,20 +82,46 @@ class OperationalPlanController extends Controller
             'tasks' => fn($q) => $q->with(['assignee','team','checklistItems'])->orderBy('due_date')->orderByDesc('priority'),
         ]);
 
-        // Events linked to this plan (by plan_id on tasks, or events that overlap plan dates)
+        // Only events explicitly linked to this plan
         $events = Event::with(['space','creator'])
-            ->where('organization_id', 1)
-            ->when($plan->planned_start && $plan->planned_end, fn($q) =>
-                $q->where('starts_at', '>=', $plan->planned_start)
-                  ->where('starts_at', '<=', $plan->planned_end)
-            )
+            ->where('plan_id', $plan->id)
             ->orderBy('starts_at')
-            ->limit(20)
             ->get();
 
         $tasksByStatus = $plan->tasks->groupBy('status')->map->count();
         $total         = $plan->tasks->count();
         $completed     = $plan->tasks->where('status','completed')->count();
+
+        // ── Requisições do plano ──────────────────────────────────────────────
+        // Tasks in this plan pending supervisor validation
+        $tasksPendingVal = $plan->tasks
+            ->filter(fn($t) => $t->validation_status === 'pendente')
+            ->values();
+
+        // Space reservations overlapping the plan period and still pending
+        $spaceReservations = ($plan->planned_start && $plan->planned_end)
+            ? SpaceReservation::with(['space','contact','user'])
+                ->where('status', 'pendente')
+                ->where('starts_at', '<=', $plan->planned_end)
+                ->where('ends_at',   '>=', $plan->planned_start)
+                ->orderBy('starts_at')
+                ->get()
+            : collect();
+
+        // ── Recursos do plano ─────────────────────────────────────────────────
+        $taskIds = $plan->tasks->pluck('id');
+        $teamIds = $plan->tasks->pluck('team_id')->filter()->unique();
+
+        $planTeams = $teamIds->isNotEmpty()
+            ? Team::with(['leader','members'])->whereIn('id', $teamIds)->get()
+            : collect();
+
+        $planAllocations = $taskIds->isNotEmpty()
+            ? MaterialAllocation::with(['item','task'])
+                ->whereIn('task_id', $taskIds)
+                ->where('status', 'em_uso')
+                ->get()
+            : collect();
 
         return Inertia::render('Planeamento/Show', [
             'plan' => array_merge($plan->toArray(), [
@@ -103,9 +131,13 @@ class OperationalPlanController extends Controller
                 'progress'        => $total > 0 ? (int) round(($completed / $total) * 100) : 0,
                 'tasks_by_status' => $tasksByStatus,
             ]),
-            'events'   => $events,
-            'users'    => User::where('is_active',true)->orderBy('name')->get(['id','name']),
-            'teams'    => Team::where('is_active',true)->orderBy('name')->get(['id','name']),
+            'events'            => $events,
+            'users'             => User::where('is_active',true)->orderBy('name')->get(['id','name']),
+            'teams'             => Team::where('is_active',true)->orderBy('name')->get(['id','name']),
+            'tasksPendingVal'   => $tasksPendingVal,
+            'spaceReservations' => $spaceReservations,
+            'planTeams'         => $planTeams,
+            'planAllocations'   => $planAllocations,
         ]);
     }
 
@@ -138,35 +170,27 @@ class OperationalPlanController extends Controller
 
     // ─── Sub-secções ──────────────────────────────────────────────────────────
 
-    public function agenda()
+    public function agenda(Request $request)
     {
-        $events = Event::with(['space','creator','participants'])
+        $now   = now();
+        $month = $request->get('month', $now->month);
+        $year  = $request->get('year',  $now->year);
+
+        // Same data as EventController::index() — the agenda sub-tab IS the main agenda
+        $events = Event::with(['space','creator','participants.user','participants.contact','tasks','reservation'])
             ->where('organization_id', 1)
-            ->where('starts_at', '>=', now()->startOfDay())
+            ->whereMonth('starts_at', $month)
+            ->whereYear('starts_at',  $year)
             ->orderBy('starts_at')
-            ->limit(60)
             ->get();
 
-        $reservations = SpaceReservation::with(['space','contact','user'])
-            ->whereIn('status', ['pendente','aprovada'])
-            ->where('starts_at', '>=', now()->startOfDay())
-            ->orderBy('starts_at')
-            ->limit(30)
-            ->get();
-
-        // Tasks with upcoming due dates (next 30 days)
-        $tasksDue = Task::with(['assignee','plan'])
-            ->where('organization_id', 1)
-            ->whereNotIn('status', ['completed','cancelled'])
-            ->whereBetween('due_date', [now(), now()->addDays(30)])
-            ->orderBy('due_date')
-            ->limit(30)
-            ->get();
-
-        return Inertia::render('Planeamento/Agenda', [
-            'events'       => $events,
-            'reservations' => $reservations,
-            'tasksDue'     => $tasksDue,
+        return Inertia::render('Events/Index', [
+            'events'   => $events,
+            'spaces'   => Space::where('is_active', true)->get(['id','name']),
+            'users'    => User::where('is_active', true)->orderBy('name')->get(['id','name']),
+            'contacts' => Contact::orderBy('name')->get(['id','name']),
+            'month'    => (int) $month,
+            'year'     => (int) $year,
         ]);
     }
 
@@ -191,7 +215,7 @@ class OperationalPlanController extends Controller
 
     public function recursos()
     {
-        $teams = Team::with(['leader','members.user'])
+        $teams = Team::with(['leader','members'])
             ->where('is_active', true)
             ->orderBy('name')
             ->get();

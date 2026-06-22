@@ -18,6 +18,9 @@ use App\Http\Controllers\SpaceController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\PersonController;
+use App\Http\Controllers\EntityController;
+use App\Http\Controllers\ConversationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -38,140 +41,214 @@ Route::middleware('auth')->group(function () {
     Route::patch('/perfil',  [SettingsController::class, 'updateProfile'])->name('profile.update');
 
     // Pedidos
-    Route::get('/pedidos',                       [TicketController::class, 'index'])->name('tickets.index');
-    Route::get('/pedidos/novo',                  [TicketController::class, 'create'])->name('tickets.create');
-    Route::post('/pedidos',                      [TicketController::class, 'store'])->name('tickets.store');
-    Route::get('/pedidos/{ticket}',              [TicketController::class, 'show'])->name('tickets.show');
-    Route::patch('/pedidos/{ticket}',            [TicketController::class, 'update'])->name('tickets.update');
-    Route::post('/pedidos/{ticket}/comentarios', [TicketController::class, 'addComment'])->name('tickets.comments.store');
+    Route::get('/pedidos',                                          [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/pedidos/novo',                                     [TicketController::class, 'create'])->name('tickets.create');
+    Route::post('/pedidos',                                         [TicketController::class, 'store'])->name('tickets.store');
+    Route::get('/pedidos/{ticket}',                                 [TicketController::class, 'show'])->name('tickets.show');
+    Route::patch('/pedidos/{ticket}',                               [TicketController::class, 'update'])->name('tickets.update');
+    Route::post('/pedidos/{ticket}/comentarios',                    [TicketController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('/pedidos/{ticket}/encaminhar',                     [TicketController::class, 'route'])->name('tickets.route');
+    Route::patch('/pedidos/{ticket}/atribuir',                      [TicketController::class, 'assign'])->name('tickets.assign');
+    Route::post('/pedidos/{ticket}/cancelar',                       [TicketController::class, 'cancel'])->name('tickets.cancel');
+    Route::post('/pedidos/{ticket}/gerar-tarefa',                   [TicketController::class, 'createTask'])->name('tickets.task.create');
+    Route::patch('/pedidos/{ticket}/contacto',                      [TicketController::class, 'updateContact'])->name('tickets.contact.update');
+    Route::post('/pedidos/{ticket}/anexos',                         [TicketController::class, 'storeAttachment'])->name('tickets.attachments.store');
+    Route::delete('/pedidos/{ticket}/anexos/{attachment}',          [TicketController::class, 'destroyAttachment'])->name('tickets.attachments.destroy');
 
     // Tarefas
-    Route::get('/tarefas',                          [TaskController::class, 'index'])->name('tasks.index');
-    Route::get('/tarefas/nova',                     [TaskController::class, 'create'])->name('tasks.create');
-    Route::post('/tarefas',                         [TaskController::class, 'store'])->name('tasks.store');
-    Route::get('/tarefas/{task}',                   [TaskController::class, 'show'])->name('tasks.show');
-    Route::get('/tarefas/{task}/edit',              [TaskController::class, 'edit'])->name('tasks.edit');
-    Route::patch('/tarefas/{task}',                 [TaskController::class, 'update'])->name('tasks.update');
-    Route::delete('/tarefas/{task}',                [TaskController::class, 'destroy'])->name('tasks.destroy');
-    Route::post('/tarefas/{task}/validar',          [TaskController::class, 'approveTask'])->name('tasks.validate');
-    Route::post('/tarefas/{task}/materiais',        [TaskController::class, 'addMaterial'])->name('tasks.materials.store');
+    Route::get('/tarefas',                                          [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tarefas/nova',                                     [TaskController::class, 'create'])->name('tasks.create');
+    Route::post('/tarefas',                                         [TaskController::class, 'store'])->name('tasks.store');
+    Route::get('/tarefas/{task}',                                   [TaskController::class, 'show'])->name('tasks.show');
+    Route::get('/tarefas/{task}/edit',                              [TaskController::class, 'edit'])->name('tasks.edit');
+    Route::patch('/tarefas/{task}',                                 [TaskController::class, 'update'])->name('tasks.update');
+    Route::delete('/tarefas/{task}',                                [TaskController::class, 'destroy'])->name('tasks.destroy');
+    Route::post('/tarefas/{task}/validar',                          [TaskController::class, 'approveTask'])->name('tasks.validate');
+    Route::post('/tarefas/{task}/materiais',                        [TaskController::class, 'addMaterial'])->name('tasks.materials.store');
     Route::post('/tarefas/{task}/checklist',                        [TaskController::class, 'storeChecklistItem'])->name('tasks.checklist.store');
     Route::patch('/tarefas/{task}/checklist/{item}/toggle',         [TaskController::class, 'toggleChecklistItem'])->name('tasks.checklist.toggle');
     Route::delete('/tarefas/{task}/checklist/{item}',               [TaskController::class, 'destroyChecklistItem'])->name('tasks.checklist.destroy');
+    Route::patch('/tarefas/{task}/checklist/{item}',                [TaskController::class, 'updateChecklistItem'])->name('tasks.checklist.update');
 
     // Equipas
-    Route::get('/equipas',                          [TeamController::class, 'index'])->name('teams.index');
-    Route::post('/equipas',                         [TeamController::class, 'store'])->name('teams.store');
-    Route::get('/equipas/{team}',                   [TeamController::class, 'show'])->name('teams.show');
-    Route::patch('/equipas/{team}',                 [TeamController::class, 'update'])->name('teams.update');
-    Route::delete('/equipas/{team}',                [TeamController::class, 'destroy'])->name('teams.destroy');
-    Route::post('/equipas/{team}/membros',          [TeamController::class, 'addMember'])->name('teams.members.add');
-    Route::delete('/equipas/{team}/membros',        [TeamController::class, 'removeMember'])->name('teams.members.remove');
+    Route::get('/equipas',                                          [TeamController::class, 'index'])->name('teams.index');
+    Route::post('/equipas',                                         [TeamController::class, 'store'])->name('teams.store');
+    Route::get('/equipas/{team}',                                   [TeamController::class, 'show'])->name('teams.show');
+    Route::patch('/equipas/{team}',                                 [TeamController::class, 'update'])->name('teams.update');
+    Route::delete('/equipas/{team}',                                [TeamController::class, 'destroy'])->name('teams.destroy');
+    Route::post('/equipas/{team}/membros',                          [TeamController::class, 'addMember'])->name('teams.members.add');
+    Route::delete('/equipas/{team}/membros',                        [TeamController::class, 'removeMember'])->name('teams.members.remove');
 
     // Manutenções
-    Route::get('/manutencoes',                      [MaintenanceController::class, 'index'])->name('maintenances.index');
-    Route::post('/manutencoes',                     [MaintenanceController::class, 'store'])->name('maintenances.store');
-    Route::get('/manutencoes/{maintenance}',        [MaintenanceController::class, 'show'])->name('maintenances.show');
-    Route::patch('/manutencoes/{maintenance}',      [MaintenanceController::class, 'update'])->name('maintenances.update');
-    Route::delete('/manutencoes/{maintenance}',     [MaintenanceController::class, 'destroy'])->name('maintenances.destroy');
+    Route::get('/manutencoes',                                      [MaintenanceController::class, 'index'])->name('maintenances.index');
+    Route::post('/manutencoes',                                     [MaintenanceController::class, 'store'])->name('maintenances.store');
+    Route::get('/manutencoes/{maintenance}',                        [MaintenanceController::class, 'show'])->name('maintenances.show');
+    Route::patch('/manutencoes/{maintenance}',                      [MaintenanceController::class, 'update'])->name('maintenances.update');
+    Route::delete('/manutencoes/{maintenance}',                     [MaintenanceController::class, 'destroy'])->name('maintenances.destroy');
 
     // Munícipes / Entidades
-    Route::get('/municipes',             [ContactController::class, 'index'])->name('contacts.index');
-    Route::get('/municipes/novo',        [ContactController::class, 'create'])->name('contacts.create');
-    Route::post('/municipes',            [ContactController::class, 'store'])->name('contacts.store');
-    Route::get('/municipes/{contact}',   [ContactController::class, 'show'])->name('contacts.show');
-    Route::get('/municipes/{contact}/edit', [ContactController::class, 'edit'])->name('contacts.edit');
-    Route::patch('/municipes/{contact}', [ContactController::class, 'update'])->name('contacts.update');
-    Route::delete('/municipes/{contact}',[ContactController::class, 'destroy'])->name('contacts.destroy');
+    // Pessoas (pessoas naturais: munícipes, funcionários, constituintes, etc.)
+    Route::get('/pessoas',                                          [PersonController::class, 'index'])->name('pessoas.index');
+    Route::post('/pessoas',                                         [PersonController::class, 'store'])->name('pessoas.store');
+    Route::get('/pessoas/{contact}',                                [PersonController::class, 'show'])->name('pessoas.show');
+    Route::patch('/pessoas/{contact}',                              [PersonController::class, 'update'])->name('pessoas.update');
+    Route::delete('/pessoas/{contact}',                             [PersonController::class, 'destroy'])->name('pessoas.destroy');
+    // Conta de acesso da pessoa
+    Route::post('/pessoas/{contact}/link-user',                     [PersonController::class, 'linkUser'])->name('pessoas.link-user');
+    Route::delete('/pessoas/{contact}/unlink-user',                 [PersonController::class, 'unlinkUser'])->name('pessoas.unlink-user');
+    Route::post('/pessoas/{contact}/criar-conta',                   [PersonController::class, 'createUserAccount'])->name('pessoas.criar-conta');
+
+    // Entidades (organizações: fornecedores, instituições, parceiros, etc.)
+    Route::get('/entidades',                                        [EntityController::class, 'index'])->name('entidades.index');
+    Route::post('/entidades',                                       [EntityController::class, 'store'])->name('entidades.store');
+    Route::get('/entidades/{contact}',                              [EntityController::class, 'show'])->name('entidades.show');
+    Route::patch('/entidades/{contact}',                            [EntityController::class, 'update'])->name('entidades.update');
+    Route::delete('/entidades/{contact}',                           [EntityController::class, 'destroy'])->name('entidades.destroy');
+
+    // Munícipes (alias legado — mantido para links existentes em Pedidos, etc.)
+    Route::get('/municipes',                                        [ContactController::class, 'index'])->name('contacts.index');
+    Route::get('/municipes/novo',                                   [ContactController::class, 'create'])->name('contacts.create');
+    Route::post('/municipes',                                       [ContactController::class, 'store'])->name('contacts.store');
+    Route::get('/municipes/{contact}',                              [ContactController::class, 'show'])->name('contacts.show');
+    Route::get('/municipes/{contact}/edit',                         [ContactController::class, 'edit'])->name('contacts.edit');
+    Route::patch('/municipes/{contact}',                            [ContactController::class, 'update'])->name('contacts.update');
+    Route::delete('/municipes/{contact}',                           [ContactController::class, 'destroy'])->name('contacts.destroy');
 
     // Agenda
-    Route::get('/agenda',                                                     [EventController::class, 'index'])->name('events.index');
-    Route::post('/agenda',                                                    [EventController::class, 'store'])->name('events.store');
-    Route::get('/agenda/{event}',                                             [EventController::class, 'show'])->name('events.show');
-    Route::patch('/agenda/{event}',                                           [EventController::class, 'update'])->name('events.update');
-    Route::delete('/agenda/{event}',                                          [EventController::class, 'destroy'])->name('events.destroy');
-    Route::post('/agenda/{event}/participantes',                              [EventController::class, 'storeParticipant'])->name('events.participants.store');
-    Route::patch('/agenda/{event}/participantes/{participant}',               [EventController::class, 'updateParticipant'])->name('events.participants.update');
-    Route::delete('/agenda/{event}/participantes/{participant}',              [EventController::class, 'destroyParticipant'])->name('events.participants.destroy');
+    Route::get('/agenda',                                           [EventController::class, 'index'])->name('events.index');
+    Route::post('/agenda',                                          [EventController::class, 'store'])->name('events.store');
+    Route::get('/agenda/{event}',                                   [EventController::class, 'show'])->name('events.show');
+    Route::patch('/agenda/{event}',                                 [EventController::class, 'update'])->name('events.update');
+    Route::delete('/agenda/{event}',                                [EventController::class, 'destroy'])->name('events.destroy');
+    Route::post('/agenda/{event}/participantes',                    [EventController::class, 'storeParticipant'])->name('events.participants.store');
+    Route::patch('/agenda/{event}/participantes/{participant}',     [EventController::class, 'updateParticipant'])->name('events.participants.update');
+    Route::delete('/agenda/{event}/participantes/{participant}',    [EventController::class, 'destroyParticipant'])->name('events.participants.destroy');
 
     // Reservas
-    Route::get('/reservas',                        [ReservationController::class, 'index'])->name('reservations.index');
-    Route::get('/reservas/nova',                   [ReservationController::class, 'create'])->name('reservations.create');
-    Route::post('/reservas',                       [ReservationController::class, 'store'])->name('reservations.store');
-    Route::get('/reservas/{reservation}',          [ReservationController::class, 'show'])->name('reservations.show');
-    Route::post('/reservas/{reservation}/aprovar', [ReservationController::class, 'approve'])->name('reservations.approve');
-    Route::post('/reservas/{reservation}/rejeitar',[ReservationController::class, 'reject'])->name('reservations.reject');
-    Route::delete('/reservas/{reservation}',       [ReservationController::class, 'destroy'])->name('reservations.destroy');
+    Route::get('/reservas',                                         [ReservationController::class, 'index'])->name('reservations.index');
+    Route::get('/reservas/nova',                                    [ReservationController::class, 'create'])->name('reservations.create');
+    Route::post('/reservas',                                        [ReservationController::class, 'store'])->name('reservations.store');
+    Route::get('/reservas/{reservation}',                           [ReservationController::class, 'show'])->name('reservations.show');
+    Route::post('/reservas/{reservation}/aprovar',                  [ReservationController::class, 'approve'])->name('reservations.approve');
+    Route::post('/reservas/{reservation}/rejeitar',                 [ReservationController::class, 'reject'])->name('reservations.reject');
+    Route::delete('/reservas/{reservation}',                        [ReservationController::class, 'destroy'])->name('reservations.destroy');
 
     // Espaços
-    Route::get('/espacos',            [SpaceController::class, 'index'])->name('spaces.index');
-    Route::post('/espacos',           [SpaceController::class, 'store'])->name('spaces.store');
-    Route::patch('/espacos/{space}',  [SpaceController::class, 'update'])->name('spaces.update');
-    Route::delete('/espacos/{space}', [SpaceController::class, 'destroy'])->name('spaces.destroy');
+    Route::get('/espacos',                                          [SpaceController::class, 'index'])->name('spaces.index');
+    Route::post('/espacos',                                         [SpaceController::class, 'store'])->name('spaces.store');
+    Route::patch('/espacos/{space}',                                [SpaceController::class, 'update'])->name('spaces.update');
+    Route::delete('/espacos/{space}',                               [SpaceController::class, 'destroy'])->name('spaces.destroy');
 
     // Documentos
-    Route::get('/documentos',                      [DocumentController::class, 'index'])->name('documents.index');
-    Route::post('/documentos',                     [DocumentController::class, 'store'])->name('documents.store');
-    Route::post('/documentos/{document}/aprovar',  [DocumentController::class, 'approve'])->name('documents.approve');
-    Route::delete('/documentos/{document}',        [DocumentController::class, 'destroy'])->name('documents.destroy');
+    Route::get('/documentos',                                       [DocumentController::class, 'index'])->name('documents.index');
+    Route::post('/documentos',                                      [DocumentController::class, 'store'])->name('documents.store');
+    Route::post('/documentos/{document}/aprovar',                   [DocumentController::class, 'approve'])->name('documents.approve');
+    Route::delete('/documentos/{document}',                         [DocumentController::class, 'destroy'])->name('documents.destroy');
 
     // Atas
-    Route::get('/atas',                  [DocumentController::class, 'atasIndex'])->name('atas.index');
-    Route::post('/atas',                 [DocumentController::class, 'atasStore'])->name('atas.store');
-    Route::get('/atas/{document}',       [DocumentController::class, 'atasShow'])->name('atas.show');
-    Route::patch('/atas/{document}',     [DocumentController::class, 'atasUpdate'])->name('atas.update');
-    Route::delete('/atas/{document}',    [DocumentController::class, 'destroy'])->name('atas.destroy');
+    Route::get('/atas',                                             [DocumentController::class, 'atasIndex'])->name('atas.index');
+    Route::post('/atas',                                            [DocumentController::class, 'atasStore'])->name('atas.store');
+    Route::get('/atas/{document}',                                  [DocumentController::class, 'atasShow'])->name('atas.show');
+    Route::patch('/atas/{document}',                                [DocumentController::class, 'atasUpdate'])->name('atas.update');
+    Route::delete('/atas/{document}',                               [DocumentController::class, 'destroy'])->name('atas.destroy');
 
     // Recursos Humanos
-    Route::get('/rh',                          [EmployeeController::class, 'index'])->name('employees.index');
-    Route::get('/rh/novo',                     [EmployeeController::class, 'create'])->name('employees.create');
-    Route::post('/rh',                         [EmployeeController::class, 'store'])->name('employees.store');
-    Route::get('/rh/{employee}',               [EmployeeController::class, 'show'])->name('employees.show');
-    Route::get('/rh/{employee}/edit',          [EmployeeController::class, 'edit'])->name('employees.edit');
-    Route::patch('/rh/{employee}',             [EmployeeController::class, 'update'])->name('employees.update');
-    Route::post('/rh/{employee}/ausencias',    [EmployeeController::class, 'storeAbsence'])->name('employees.absences.store');
+    Route::get('/rh',                                               [EmployeeController::class, 'index'])->name('employees.index');
+    Route::get('/rh/novo',                                          [EmployeeController::class, 'create'])->name('employees.create');
+    Route::post('/rh',                                              [EmployeeController::class, 'store'])->name('employees.store');
+    Route::get('/rh/{employee}',                                    [EmployeeController::class, 'show'])->name('employees.show');
+    Route::get('/rh/{employee}/edit',                               [EmployeeController::class, 'edit'])->name('employees.edit');
+    Route::patch('/rh/{employee}',                                  [EmployeeController::class, 'update'])->name('employees.update');
+    Route::post('/rh/{employee}/ausencias',                         [EmployeeController::class, 'storeAbsence'])->name('employees.absences.store');
 
     // Recursos Materiais (Inventário)
-    Route::get('/inventario',                        [InventoryController::class, 'index'])->name('inventory.index');
-    Route::post('/inventario',                       [InventoryController::class, 'store'])->name('inventory.store');
-    Route::patch('/inventario/{item}',               [InventoryController::class, 'update'])->name('inventory.update');
-    Route::post('/inventario/{item}/movimentos',     [InventoryController::class, 'addMovement'])->name('inventory.movements.store');
-    Route::post('/inventario/{item}/alocar',         [InventoryController::class, 'allocate'])->name('inventory.allocate');
-    Route::get('/inventario/alocacoes',              [InventoryController::class, 'allocations'])->name('inventory.allocations');
-    Route::patch('/alocacoes/{allocation}/devolver', [InventoryController::class, 'returnAllocation'])->name('allocations.return');
+    // ── Recursos / Inventário ──────────────────────────────────────────────────
+    Route::get('/inventario',                                              [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('/inventario/stock',                                        [InventoryController::class, 'stock'])->name('inventory.stock');
+    Route::get('/inventario/emprestimos',                                  [InventoryController::class, 'loans'])->name('inventory.loans');
+    Route::get('/inventario/requisicoes',                                  [InventoryController::class, 'requisitions'])->name('inventory.requisitions');
+    // Catálogo CRUD
+    Route::post('/inventario',                                             [InventoryController::class, 'store'])->name('inventory.store');
+    Route::patch('/inventario/{item}',                                     [InventoryController::class, 'update'])->name('inventory.update');
+    Route::delete('/inventario/{item}',                                    [InventoryController::class, 'destroy'])->name('inventory.destroy');
+    Route::post('/inventario/categorias',                                  [InventoryController::class, 'storeCategory'])->name('inventory.categories.store');
+    // Movimentos de stock
+    Route::post('/inventario/{item}/movimentos',                           [InventoryController::class, 'addMovement'])->name('inventory.movements.store');
+    // Empréstimos
+    Route::post('/inventario/emprestimos',                                 [InventoryController::class, 'storeLoan'])->name('inventory.loans.store');
+    Route::patch('/inventario/emprestimos/{loan}/devolver',                [InventoryController::class, 'returnLoan'])->name('inventory.loans.return');
+    // Requisições
+    Route::post('/inventario/requisicoes',                                 [InventoryController::class, 'storeRequisition'])->name('inventory.requisitions.store');
+    Route::patch('/inventario/requisicoes/{req}/aprovar',                  [InventoryController::class, 'approveRequisition'])->name('inventory.requisitions.approve');
+    Route::patch('/inventario/requisicoes/{req}/rejeitar',                 [InventoryController::class, 'rejectRequisition'])->name('inventory.requisitions.reject');
+    Route::patch('/inventario/requisicoes/{req}/entregar',                 [InventoryController::class, 'deliverRequisition'])->name('inventory.requisitions.deliver');
+    // Compat legado
+    Route::post('/inventario/{item}/alocar',                               [InventoryController::class, 'allocate'])->name('inventory.allocate');
+    Route::get('/inventario/alocacoes',                                    [InventoryController::class, 'allocations'])->name('inventory.allocations');
+    Route::patch('/alocacoes/{allocation}/devolver',                [InventoryController::class, 'returnAllocation'])->name('allocations.return');
+
+    // ── Chat ──────────────────────────────────────────────────────────────────
+    Route::get('/chat',                                                        [ConversationController::class, 'index'])->name('chat.index');
+    Route::get('/chat/{conversation}',                                         [ConversationController::class, 'show'])->name('chat.show');
+    Route::post('/chat',                                                       [ConversationController::class, 'store'])->name('chat.store');
+    Route::patch('/chat/{conversation}',                                       [ConversationController::class, 'update'])->name('chat.update');
+    Route::delete('/chat/{conversation}',                                      [ConversationController::class, 'destroy'])->name('chat.destroy');
+    Route::post('/chat/{conversation}/mensagens',                              [ConversationController::class, 'sendMessage'])->name('chat.messages.store');
+    Route::get('/chat/{conversation}/poll',                                    [ConversationController::class, 'poll'])->name('chat.poll');
+    Route::delete('/chat/{conversation}/mensagens/{message}',                  [ConversationController::class, 'destroyMessage'])->name('chat.messages.destroy');
+    Route::post('/chat/{conversation}/mensagens/{message}/tarefa',             [ConversationController::class, 'messageToTask'])->name('chat.messages.task');
+    Route::post('/chat/{conversation}/mensagens/{message}/pedido',             [ConversationController::class, 'messageToTicket'])->name('chat.messages.ticket');
+    Route::post('/chat/push/subscribe',                                        [ConversationController::class, 'subscribePush'])->name('chat.push.subscribe');
 
     // Planeamento — sub-secções fixas (antes das rotas com {plan})
-    Route::get('/planeamento/agenda',       [OperationalPlanController::class, 'agenda'])->name('plans.agenda');
-    Route::get('/planeamento/requisicoes',  [OperationalPlanController::class, 'requisicoes'])->name('plans.requisicoes');
-    Route::get('/planeamento/recursos',     [OperationalPlanController::class, 'recursos'])->name('plans.recursos');
+    Route::get('/planeamento/agenda',                               [OperationalPlanController::class, 'agenda'])->name('plans.agenda');
+    Route::get('/planeamento/requisicoes',                          [OperationalPlanController::class, 'requisicoes'])->name('plans.requisicoes');
 
     // Planeamento — planos operacionais
-    Route::get('/planeamento',              [OperationalPlanController::class, 'index'])->name('plans.index');
-    Route::post('/planeamento',             [OperationalPlanController::class, 'store'])->name('plans.store');
-    Route::get('/planeamento/{plan}',       [OperationalPlanController::class, 'show'])->name('plans.show');
-    Route::patch('/planeamento/{plan}',     [OperationalPlanController::class, 'update'])->name('plans.update');
-    Route::delete('/planeamento/{plan}',    [OperationalPlanController::class, 'destroy'])->name('plans.destroy');
+    Route::get('/planeamento',                                      [OperationalPlanController::class, 'index'])->name('plans.index');
+    Route::post('/planeamento',                                     [OperationalPlanController::class, 'store'])->name('plans.store');
+    Route::get('/planeamento/{plan}',                               [OperationalPlanController::class, 'show'])->name('plans.show');
+    Route::patch('/planeamento/{plan}',                             [OperationalPlanController::class, 'update'])->name('plans.update');
+    Route::delete('/planeamento/{plan}',                            [OperationalPlanController::class, 'destroy'])->name('plans.destroy');
 
     // Relatórios
-    Route::get('/relatorios', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/relatorios',                                       [ReportController::class, 'index'])->name('reports.index');
 
     // Notificações
-    Route::get('/notificacoes',                    [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notificacoes/marcar-todas',      [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
-    Route::post('/notificacoes/{recipient}/lida',  [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::get('/notificacoes',                                     [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notificacoes/marcar-todas',                       [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
+    Route::post('/notificacoes/{recipient}/lida',                   [NotificationController::class, 'markRead'])->name('notifications.read');
 
     // Configurações
-    Route::get('/configuracoes',          [SettingsController::class, 'index'])->name('settings.index');
-    Route::get('/configuracoes/usuarios', [SettingsController::class, 'users'])->name('settings.users');
-    Route::post('/configuracoes/usuarios',[SettingsController::class, 'storeUser'])->name('settings.users.store');
-    Route::patch('/configuracoes/usuarios/{user}', [SettingsController::class, 'updateUser'])->name('settings.users.update');
-    Route::delete('/configuracoes/usuarios/{user}',[SettingsController::class, 'destroyUser'])->name('settings.users.destroy');
+    Route::get('/configuracoes',                                    [SettingsController::class, 'index'])->name('settings.index');
+    Route::get('/configuracoes/utilizadores',                       [SettingsController::class, 'utilizadores'])->name('settings.utilizadores');
+    Route::get('/configuracoes/perfis',                             [SettingsController::class, 'perfis'])->name('settings.perfis');
+    Route::post('/configuracoes/instituicao',                       [SettingsController::class, 'updateInstitution'])->name('settings.institution.update');
+    Route::delete('/configuracoes/instituicao/logo',                [SettingsController::class, 'removeLogo'])->name('settings.institution.logo.remove');
+    Route::post('/configuracoes/permissoes',                        [SettingsController::class, 'updatePermissions'])->name('settings.permissions.update');
+    Route::post('/configuracoes/usuarios',                          [SettingsController::class, 'storeUser'])->name('settings.users.store');
+    Route::patch('/configuracoes/usuarios/{user}',                  [SettingsController::class, 'updateUser'])->name('settings.users.update');
+    Route::delete('/configuracoes/usuarios/{user}',                 [SettingsController::class, 'destroyUser'])->name('settings.users.destroy');
 
     // Configurações — Tipos de Pessoa
-    Route::get('/configuracoes/tipos-pessoa',           [PersonTypeController::class, 'index'])->name('person-types.index');
-    Route::post('/configuracoes/tipos-pessoa',          [PersonTypeController::class, 'store'])->name('person-types.store');
-    Route::patch('/configuracoes/tipos-pessoa/{personType}', [PersonTypeController::class, 'update'])->name('person-types.update');
-    Route::delete('/configuracoes/tipos-pessoa/{personType}',[PersonTypeController::class, 'destroy'])->name('person-types.destroy');
+    Route::get('/configuracoes/tipos-pessoa',                       [PersonTypeController::class, 'index'])->name('person-types.index');
+    Route::post('/configuracoes/tipos-pessoa',                      [PersonTypeController::class, 'store'])->name('person-types.store');
+    Route::patch('/configuracoes/tipos-pessoa/{personType}',        [PersonTypeController::class, 'update'])->name('person-types.update');
+    Route::delete('/configuracoes/tipos-pessoa/{personType}',       [PersonTypeController::class, 'destroy'])->name('person-types.destroy');
+    // ── Chat ──────────────────────────────────────────────────────────────────
+    Route::get('/chat',                                                      [ConversationController::class, 'index'])->name('chat.index');
+    Route::post('/chat',                                                     [ConversationController::class, 'store'])->name('chat.store');
+    Route::get('/chat/{conversation}',                                       [ConversationController::class, 'show'])->name('chat.show');
+    Route::patch('/chat/{conversation}',                                     [ConversationController::class, 'update'])->name('chat.update');
+    Route::delete('/chat/{conversation}',                                    [ConversationController::class, 'destroy'])->name('chat.destroy');
+    Route::post('/chat/{conversation}/messages',                             [ConversationController::class, 'sendMessage'])->name('chat.message.send');
+    Route::get('/chat/{conversation}/poll',                                  [ConversationController::class, 'poll'])->name('chat.poll');
+    Route::delete('/chat/{conversation}/messages/{message}',                 [ConversationController::class, 'destroyMessage'])->name('chat.message.destroy');
+    Route::post('/chat/{conversation}/messages/{message}/task',              [ConversationController::class, 'messageToTask'])->name('chat.message.task');
+    Route::post('/chat/{conversation}/messages/{message}/ticket',            [ConversationController::class, 'messageToTicket'])->name('chat.message.ticket');
+    Route::post('/chat/push/subscribe',                                      [ConversationController::class, 'subscribePush'])->name('chat.push.subscribe');
+
+
 });
 
 Route::fallback(fn() => Inertia::render('404'));

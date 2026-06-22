@@ -26,7 +26,7 @@ export default function PerfilIndex({ user }: any) {
   return (
     <AdminLayout title="Meu Perfil">
       <Head title="Perfil — JuntaOS"/>
-      <div className="p-6 max-w-2xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
         <h1 className="text-xl font-bold text-gray-900">Meu Perfil</h1>
 
         {/* Avatar & info */}

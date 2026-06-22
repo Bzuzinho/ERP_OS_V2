@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Contact;
 use App\Models\Event;
 use App\Models\EventParticipant;
+use App\Models\OperationalPlan;
 use App\Models\Space;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class EventController extends Controller
         $month = $request->get('month', $now->month);
         $year  = $request->get('year',  $now->year);
 
-        $events = Event::with(['space','creator','participants.user','participants.contact','tasks'])
+        $events = Event::with(['space','creator','participants.user','participants.contact','tasks','reservation','plan'])
             ->where('organization_id', 1)
             ->whereMonth('starts_at', $month)
             ->whereYear('starts_at',  $year)
@@ -30,6 +31,7 @@ class EventController extends Controller
             'spaces'   => Space::where('is_active', true)->get(['id','name']),
             'users'    => User::where('is_active', true)->orderBy('name')->get(['id','name']),
             'contacts' => Contact::orderBy('name')->get(['id','name']),
+            'plans'    => OperationalPlan::where('organization_id', 1)->whereIn('status',['rascunho','ativo'])->orderBy('title')->get(['id','title']),
             'month'    => (int) $month,
             'year'     => (int) $year,
         ]);
@@ -58,6 +60,7 @@ class EventController extends Controller
             'type'        => 'required|in:interno,público,reunião,reserva,planeamento',
             'visibility'  => 'required|in:interno,público',
             'space_id'    => 'nullable|exists:spaces,id',
+            'plan_id'     => 'nullable|exists:operational_plans,id',
             'location'    => 'nullable|string',
             'color'       => 'nullable|string|max:7',
         ]);
@@ -90,6 +93,7 @@ class EventController extends Controller
             'color'       => 'nullable|string|max:7',
             'location'    => 'nullable|string',
             'space_id'    => 'nullable|exists:spaces,id',
+            'plan_id'     => 'nullable|exists:operational_plans,id',
         ]);
 
         $event->update($data);

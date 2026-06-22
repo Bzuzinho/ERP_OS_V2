@@ -69,8 +69,10 @@ class TaskController extends Controller
             'plan_id'           => 'nullable|exists:operational_plans,id',
             'due_date'          => 'nullable|date',
             'service_area_id'   => 'nullable|exists:service_areas,id',
-            'validation_status' => 'in:nao_aplicavel,pendente,validado,rejeitado',
-            'checklist'         => 'nullable|array',
+            'validation_status'  => 'in:nao_aplicavel,pendente,validado,rejeitado',
+            'recurrence'         => 'nullable|in:nenhuma,diária,semanal,quinzenal,mensal,anual',
+            'recurrence_ends_at' => 'nullable|date',
+            'checklist'          => 'nullable|array',
             'checklist.*.title' => 'required|string|max:255',
             'materials'         => 'nullable|array',
             'materials.*.inventory_item_id' => 'exists:inventory_items,id',
@@ -144,11 +146,20 @@ class TaskController extends Controller
             'plan_id'           => 'nullable|exists:operational_plans,id',
             'due_date'          => 'nullable|date',
             'service_area_id'   => 'nullable|exists:service_areas,id',
-            'validation_status' => 'sometimes|in:nao_aplicavel,pendente,validado,rejeitado',
-            'rejection_reason'  => 'nullable|string',
+            'validation_status'  => 'sometimes|in:nao_aplicavel,pendente,validado,rejeitado',
+            'rejection_reason'   => 'nullable|string',
+            'recurrence'         => 'sometimes|in:nenhuma,diária,semanal,quinzenal,mensal,anual',
+            'recurrence_ends_at' => 'nullable|date',
         ]);
 
+        $wasCompleted = $task->status === 'completed';
         $task->update($validated);
+
+        // Se acabou de ser marcada como completa e é recorrente → criar próxima ocorrência
+        if (!$wasCompleted && $task->fresh()->status === 'completed' && $task->isRecurring()) {
+            $task->createNextOccurrence();
+        }
+
         return back()->with('message', 'Tarefa atualizada.');
     }
 
@@ -169,11 +180,25 @@ class TaskController extends Controller
     public function toggleChecklistItem(Task $task, TaskChecklistItem $item)
     {
         abort_unless($item->task_id === $task->id, 403);
+        $nowCompleted = !$item->is_completed;
         $item->update([
-            'is_completed' => !$item->is_completed,
-            'completed_by' => !$item->is_completed ? Auth::id() : null,
-            'completed_at' => !$item->is_completed ? now() : null,
+            'is_completed' => $nowCompleted,
+            'completed_by' => $nowCompleted ? Auth::id() : null,
+            'completed_at' => $nowCompleted ? now() : null,
         ]);
+
+        // Auto-complete task when all checklist items are done
+        if ($nowCompleted) {
+            $allDone = $task->checklistItems()->where('is_completed', false)->doesntExist();
+            if ($allDone && $task->status !== 'completed') {
+                $task->update(['status' => 'completed']);
+                // Se é tarefa recorrente, criar próxima ocorrência
+                if ($task->isRecurring()) {
+                    $task->createNextOccurrence();
+                }
+            }
+        }
+
         return back();
     }
 
@@ -182,6 +207,14 @@ class TaskController extends Controller
         abort_unless($item->task_id === $task->id, 403);
         $item->delete();
         return back()->with('message', 'Item removido.');
+    }
+
+    public function updateChecklistItem(Request $request, Task $task, TaskChecklistItem $item)
+    {
+        abort_unless($item->task_id === $task->id, 403);
+        $data = $request->validate(['title' => 'required|string|max:255']);
+        $item->update($data);
+        return back()->with('message', 'Item atualizado.');
     }
 
     // ─── Validação ────────────────────────────────────────────────────────────

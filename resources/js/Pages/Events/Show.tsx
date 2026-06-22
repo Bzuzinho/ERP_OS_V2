@@ -95,7 +95,7 @@ export default function EventShow({ event, users = [], contacts = [], spaces = [
   return (
     <AdminLayout title={event.title}>
       <Head title={`${event.title} — JuntaOS`}/>
-      <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500">

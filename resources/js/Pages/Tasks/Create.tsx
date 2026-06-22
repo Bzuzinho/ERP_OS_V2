@@ -8,18 +8,20 @@ export default function TaskCreate({ users = [], serviceAreas = [], teams = [], 
   const [newItem, setNewItem] = useState('')
 
   const { data, setData, post, processing, errors } = useForm({
-    title:             '',
-    description:       '',
-    priority:          'medium',
-    status:            'pending',
-    assigned_to:       '',
-    team_id:           '',
-    plan_id:           '',
-    service_area_id:   '',
-    due_date:          '',
-    validation_status: 'nao_aplicavel',
-    checklist:         [] as { title: string }[],
-    materials:         [] as { inventory_item_id: string; quantity: number; usage_type: string }[],
+    title:               '',
+    description:         '',
+    priority:            'medium',
+    status:              'pending',
+    assigned_to:         '',
+    team_id:             '',
+    plan_id:             '',
+    service_area_id:     '',
+    due_date:            '',
+    validation_status:   'nao_aplicavel',
+    recurrence:          'nenhuma',
+    recurrence_ends_at:  '',
+    checklist:           [] as { title: string }[],
+    materials:           [] as { inventory_item_id: string; quantity: number; usage_type: string }[],
   })
 
   function addChecklist() {
@@ -57,7 +59,7 @@ export default function TaskCreate({ users = [], serviceAreas = [], teams = [], 
   return (
     <AdminLayout title="Nova Tarefa">
       <Head title="Nova Tarefa — JuntaOS"/>
-      <div className="p-6 max-w-3xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
 
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Link href="/tarefas" className="hover:text-primary-600 flex items-center gap-1"><ChevronLeft size={14}/>Tarefas</Link>
@@ -149,6 +151,36 @@ export default function TaskCreate({ users = [], serviceAreas = [], teams = [], 
                   <option value="pendente">Sim — pendente</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Recorrência */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+            <div>
+              <h2 className="font-semibold text-gray-800">Recorrência</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Ao concluir esta tarefa, a próxima ocorrência é criada automaticamente.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Padrão</label>
+                <select value={data.recurrence} onChange={e => setData('recurrence', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400">
+                  <option value="nenhuma">Sem recorrência</option>
+                  <option value="diária">Diária</option>
+                  <option value="semanal">Semanal</option>
+                  <option value="quinzenal">Quinzenal</option>
+                  <option value="mensal">Mensal</option>
+                  <option value="anual">Anual</option>
+                </select>
+              </div>
+              {data.recurrence !== 'nenhuma' && (
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Termina em (opcional)</label>
+                  <input type="date" value={data.recurrence_ends_at}
+                    onChange={e => setData('recurrence_ends_at', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"/>
+                </div>
+              )}
             </div>
           </div>
 

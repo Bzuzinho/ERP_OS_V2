@@ -32,8 +32,23 @@ class User extends Authenticatable
     public function serviceAreas() { return $this->belongsToMany(ServiceArea::class, 'service_area_user'); }
     public function notificationRecipients() { return $this->hasMany(NotificationRecipient::class); }
 
+    // Chat
+    public function conversations() {
+        return $this->belongsToMany(Conversation::class, 'conversation_participants')
+                    ->withPivot('is_admin', 'last_read_at', 'joined_at');
+    }
+    public function messages() { return $this->hasMany(Message::class); }
+    public function pushSubscriptions() { return $this->hasMany(PushSubscription::class); }
+
     public function unreadNotificationsCount(): int
     {
         return $this->notificationRecipients()->whereNull('read_at')->count();
+    }
+
+    public function unreadMessagesCount(): int
+    {
+        return Conversation::whereHas('participants', fn($q) => $q->where('user_id', $this->id))
+            ->get()
+            ->sum(fn($c) => $c->load(['participantRecords', 'messages'])->unreadCount($this->id));
     }
 }

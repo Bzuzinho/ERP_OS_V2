@@ -51,7 +51,7 @@ export default function Dashboard({ stats = {}, recentTickets = [], upcomingEven
   return (
     <AdminLayout title="Dashboard">
       <Head title="Dashboard — JuntaOS" />
-      <div className="p-6 max-w-7xl mx-auto space-y-8">
+      <div className="p-4 md:p-6 space-y-8">
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

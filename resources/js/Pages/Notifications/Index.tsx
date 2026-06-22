@@ -39,7 +39,7 @@ export default function NotificationsIndex({ notifications, unreadCount }: any) 
   return (
     <AdminLayout title="Notificações">
       <Head title="Notificações — JuntaOS"/>
-      <div className="p-6 max-w-3xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
 
         <div className="flex items-center justify-between">
           <div>

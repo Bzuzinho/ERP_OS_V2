@@ -4,7 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout'
 import {
   Users, UserPlus, UserMinus, Edit2, Save, X, Trash2,
   Phone, Mail, Building2, CheckCircle2, Clock, ChevronRight,
-  Wrench, ClipboardList, Shield
+  ClipboardList, Shield
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -86,7 +86,7 @@ export default function EquipasShow({ team, users }: any) {
   return (
     <AdminLayout title={team.name}>
       <Head title={`${team.name} — JuntaOS`} />
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-500">
@@ -142,10 +142,6 @@ export default function EquipasShow({ team, users }: any) {
           <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
             <div className="text-2xl font-bold text-blue-600">{team.tasks_count}</div>
             <div className="text-sm text-gray-500 mt-0.5">Tarefas</div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">{team.maintenances_count}</div>
-            <div className="text-sm text-gray-500 mt-0.5">Manutenções</div>
           </div>
         </div>
 
@@ -235,11 +231,6 @@ export default function EquipasShow({ team, users }: any) {
               <a href={`/tarefas?team_id=${team.id}`}
                 className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700 group">
                 <span className="flex items-center gap-2"><ClipboardList size={15} className="text-blue-500"/>Ver tarefas</span>
-                <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500"/>
-              </a>
-              <a href={`/manutencoes?team_id=${team.id}`}
-                className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700 group">
-                <span className="flex items-center gap-2"><Wrench size={15} className="text-orange-500"/>Ver manutenções</span>
                 <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500"/>
               </a>
             </div>
@@ -361,29 +352,6 @@ export default function EquipasShow({ team, users }: any) {
               </div>
             )}
 
-            {/* Maintenances */}
-            {team.maintenances && team.maintenances.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <Wrench size={16} className="text-orange-600"/>
-                    Manutenções
-                  </h2>
-                  <a href="/manutencoes" className="text-sm text-primary-600 hover:underline">Ver todas →</a>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {team.maintenances.slice(0, 4).map((m: any) => (
-                    <a key={m.id} href={`/manutencoes/${m.id}`}
-                      className="flex items-center gap-3 py-2.5 hover:bg-gray-50 -mx-2 px-2 rounded-lg group">
-                      <Wrench size={14} className="text-orange-400 flex-shrink-0"/>
-                      <span className="flex-1 text-sm text-gray-700 truncate group-hover:text-primary-600">{m.title}</span>
-                      {m.space && <span className="text-xs text-gray-400 flex-shrink-0">{m.space.name}</span>}
-                      <ChevronRight size={14} className="text-gray-300 flex-shrink-0"/>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

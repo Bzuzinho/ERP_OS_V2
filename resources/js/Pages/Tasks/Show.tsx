@@ -1,10 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Head, Link, router, useForm } from '@inertiajs/react'
 import AdminLayout from '@/Layouts/AdminLayout'
 import {
   CheckSquare, Square, Plus, Trash2, ChevronLeft, Package,
   User, Calendar, Clock, Tag, ShieldCheck, XCircle, Edit2,
-  AlertTriangle, CheckCircle2, RotateCcw,
+  AlertTriangle, CheckCircle2, RotateCcw, Check, X,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -41,10 +41,12 @@ function Section({ title, children, action }: any) {
 }
 
 export default function TaskShow({ task, users = [], inventory = [] }: any) {
-  const [addingItem, setAddingItem] = useState(false)
-  const [newItem, setNewItem]       = useState('')
-  const [addingMat, setAddingMat]   = useState(false)
-  const [rejectOpen, setRejectOpen] = useState(false)
+  const [addingItem, setAddingItem]   = useState(false)
+  const [newItem, setNewItem]         = useState('')
+  const [editingItem, setEditingItem] = useState<number|null>(null)
+  const [editText, setEditText]       = useState('')
+  const [addingMat, setAddingMat]     = useState(false)
+  const [rejectOpen, setRejectOpen]   = useState(false)
 
   const matForm   = useForm({ inventory_item_id: '', quantity: 1, usage_type: 'consumido', notes: '' })
   const valForm   = useForm({ action: 'validado', rejection_reason: '' })
@@ -74,6 +76,24 @@ export default function TaskShow({ task, users = [], inventory = [] }: any) {
   function deleteItem(itemId: number) {
     if (!confirm('Remover item?')) return
     router.delete(`/tarefas/${task.id}/checklist/${itemId}`, { preserveScroll: true })
+  }
+
+  function startEdit(item: any) {
+    setEditingItem(item.id)
+    setEditText(item.title)
+  }
+
+  function saveEdit(itemId: number) {
+    if (!editText.trim()) return
+    router.patch(`/tarefas/${task.id}/checklist/${itemId}`, { title: editText }, {
+      preserveScroll: true,
+      onSuccess: () => { setEditingItem(null); setEditText('') },
+    })
+  }
+
+  function cancelEdit() {
+    setEditingItem(null)
+    setEditText('')
   }
 
   function submitMaterial(e: React.FormEvent) {
@@ -106,7 +126,7 @@ export default function TaskShow({ task, users = [], inventory = [] }: any) {
   return (
     <AdminLayout title={task.title}>
       <Head title={`Tarefa — ${task.title}`} />
-      <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -156,6 +176,28 @@ export default function TaskShow({ task, users = [], inventory = [] }: any) {
             </div>
           </div>
 
+          {/* Recorrência */}
+          {task.recurrence && task.recurrence !== 'nenhuma' && (
+            <div className="mt-3 flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Recorrente · {task.recurrence}
+                {task.occurrence_number > 1 && ` · ocorrência ${task.occurrence_number}`}
+              </span>
+              {task.recurrence_ends_at && (
+                <span className="text-xs text-gray-400">
+                  até {new Date(task.recurrence_ends_at).toLocaleDateString('pt-PT')}
+                </span>
+              )}
+              {task.parent_task_id && (
+                <a href={`/tarefas/${task.parent_task_id}`}
+                  className="text-xs text-primary-600 hover:underline">
+                  Ver tarefa original
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Change status */}
           <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 flex-wrap">
             <span className="text-xs text-gray-500 font-medium mr-1">Mudar estado:</span>
@@ -200,19 +242,45 @@ export default function TaskShow({ task, users = [], inventory = [] }: any) {
                   <li className="px-4 py-6 text-sm text-gray-400 text-center">Sem itens no checklist.</li>
                 )}
                 {checklist.map((item: any) => (
-                  <li key={item.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/50 group">
+                  <li key={item.id} className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50/50">
                     <button onClick={() => toggleItem(item.id)} className="flex-shrink-0">
                       {item.is_completed
                         ? <CheckSquare size={17} className="text-primary-600"/>
                         : <Square size={17} className="text-gray-300 hover:text-gray-400"/>
                       }
                     </button>
-                    <span className={clsx('flex-1 text-sm', item.is_completed && 'line-through text-gray-400')}>
-                      {item.title}
-                    </span>
-                    <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all">
-                      <Trash2 size={13}/>
-                    </button>
+                    {editingItem === item.id ? (
+                      <>
+                        <input
+                          autoFocus
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveEdit(item.id)
+                            if (e.key === 'Escape') cancelEdit()
+                          }}
+                          className="flex-1 text-sm border border-primary-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-400"
+                        />
+                        <button onClick={() => saveEdit(item.id)} className="text-green-600 hover:text-green-700 flex-shrink-0">
+                          <Check size={14}/>
+                        </button>
+                        <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+                          <X size={14}/>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className={clsx('flex-1 text-sm', item.is_completed && 'line-through text-gray-400')}>
+                          {item.title}
+                        </span>
+                        <button onClick={() => startEdit(item)} className="text-gray-300 hover:text-primary-500 flex-shrink-0 transition-colors">
+                          <Edit2 size={13}/>
+                        </button>
+                        <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-500 flex-shrink-0 transition-colors">
+                          <Trash2 size={13}/>
+                        </button>
+                      </>
+                    )}
                   </li>
                 ))}
                 {addingItem && (
@@ -384,28 +452,18 @@ export default function TaskShow({ task, users = [], inventory = [] }: any) {
                     <span className="text-gray-700">{task.validator.name}</span>
                   </div>
                 )}
-                {task.validated_at && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">Criada em</p>
+                  <span className="text-gray-700">{new Date(task.created_at).toLocaleDateString('pt-PT')}</span>
+                </div>
+                {task.due_date && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-0.5">Data validação</p>
-                    <span className="text-gray-700">{new Date(task.validated_at).toLocaleDateString('pt-PT')}</span>
+                    <p className="text-xs text-gray-400 mb-0.5">Prazo</p>
+                    <span className="text-gray-700">{new Date(task.due_date).toLocaleDateString('pt-PT')}</span>
                   </div>
                 )}
               </div>
             </Section>
-
-            {/* Danger */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-              <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Zona de perigo</p>
-              <Link
-                href={`/tarefas/${task.id}`}
-                method="delete"
-                as="button"
-                className="w-full flex items-center justify-center gap-2 text-sm text-red-600 border border-red-200 rounded-lg py-2 hover:bg-red-50 transition-colors"
-                onClick={(e: any) => { if (!confirm('Eliminar esta tarefa?')) e.preventDefault() }}
-              >
-                <AlertTriangle size={14}/> Eliminar tarefa
-              </Link>
-            </div>
           </div>
         </div>
       </div>

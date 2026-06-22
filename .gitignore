@@ -20,7 +20,7 @@ yarn-error.log
 .venv
 venv/
 dist/
-build/
+# /public/build NÃO está aqui — o Railway precisa de compilar ou receber os assets
 .cache/
 *.sqlite
 *.sqlite-journal

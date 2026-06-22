@@ -3,7 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react'
 import AdminLayout from '@/Layouts/AdminLayout'
 import {
   Plus, X, ChevronLeft, ChevronRight, MapPin, Users,
-  Clock, CalendarDays, Trash2, CheckSquare, UserPlus,
+  Clock, CalendarDays, Trash2, CheckSquare, UserPlus, ExternalLink,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -38,7 +38,7 @@ function formatDt(dt: string, allDay: boolean) {
 }
 
 // ── Slide-over de detalhe ─────────────────────────────────────────────────────
-function EventPanel({ event, users, contacts, onClose }: any) {
+function EventPanel({ event, users, contacts, plans, onClose }: any) {
   const [addingP, setAddingP] = useState(false)
   const [editMode, setEditMode] = useState(false)
 
@@ -52,6 +52,7 @@ function EventPanel({ event, users, contacts, onClose }: any) {
     visibility:  event.visibility,
     color:       event.color ?? '#0284c7',
     location:    event.location ?? '',
+    plan_id:     event.plan_id ? String(event.plan_id) : '',
   })
 
   const participants = event.participants ?? []
@@ -120,6 +121,22 @@ function EventPanel({ event, users, contacts, onClose }: any) {
               <span>{event.space.name}</span>
             </div>
           )}
+          {event.reservation && (
+            <div className="flex items-center gap-2">
+              <ExternalLink size={13} className="text-gray-400"/>
+              <Link href={`/reservas/${event.reservation.id}`} className="text-primary-600 hover:underline text-sm">
+                Ver reserva
+              </Link>
+            </div>
+          )}
+          {event.plan && (
+            <div className="flex items-center gap-2">
+              <ExternalLink size={13} className="text-gray-400"/>
+              <Link href={`/planeamento/${event.plan.id}`} className="text-primary-600 hover:underline text-sm">
+                Plano: {event.plan.title}
+              </Link>
+            </div>
+          )}
         </div>
 
         {event.description && (
@@ -152,6 +169,11 @@ function EventPanel({ event, users, contacts, onClose }: any) {
               <input value={eForm.data.location} onChange={e => eForm.setData('location', e.target.value)}
                 className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-400" placeholder="Local"/>
             </div>
+            <select value={eForm.data.plan_id} onChange={e => eForm.setData('plan_id', e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-400">
+              <option value="">Sem plano</option>
+              {plans.map((p: any) => <option key={p.id} value={String(p.id)}>{p.title}</option>)}
+            </select>
             <div className="flex gap-2">
               <button type="submit" disabled={eForm.processing} className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded-lg hover:bg-primary-700 disabled:opacity-50">Guardar</button>
               <button type="button" onClick={() => setEditMode(false)} className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancelar</button>
@@ -263,7 +285,7 @@ function EventPanel({ event, users, contacts, onClose }: any) {
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
-export default function EventsIndex({ events = [], spaces = [], users = [], contacts = [], month, year }: any) {
+export default function EventsIndex({ events = [], spaces = [], users = [], contacts = [], plans = [], month, year }: any) {
   const now = new Date()
   const [m, setM] = useState<number>(month ?? now.getMonth() + 1)
   const [y, setY] = useState<number>(year  ?? now.getFullYear())
@@ -274,7 +296,7 @@ export default function EventsIndex({ events = [], spaces = [], users = [], cont
   const { data, setData, post, processing, reset } = useForm({
     title:'', description:'', starts_at:'', ends_at:'',
     all_day: false, type:'interno', visibility:'interno',
-    space_id:'', location:'', color:'#0284c7',
+    space_id:'', location:'', color:'#0284c7', plan_id:'',
   })
 
   function navigate(dir: number) {
@@ -354,6 +376,11 @@ export default function EventsIndex({ events = [], spaces = [], users = [], cont
                   className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-400">
                   <option value="">Sem espaço</option>
                   {spaces.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <select value={data.plan_id} onChange={e => setData('plan_id', e.target.value)}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-400">
+                  <option value="">Sem plano</option>
+                  {plans.map((p: any) => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select>
                 <input value={data.location} onChange={e => setData('location', e.target.value)} placeholder="Local"
                   className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-400"/>
@@ -462,6 +489,7 @@ export default function EventsIndex({ events = [], spaces = [], users = [], cont
               event={selectedEvent}
               users={users}
               contacts={contacts}
+              plans={plans}
               onClose={() => setSelectedEvent(null)}
             />
           </div>

@@ -51,7 +51,7 @@ export default function PlaneamentoIndex({ plans = [], stats = {} }: any) {
   return (
     <AdminLayout title="Planeamento">
       <Head title="Planeamento — JuntaOS"/>
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">

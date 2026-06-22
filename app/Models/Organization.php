@@ -9,11 +9,19 @@ class Organization extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','slug','email','phone','address','city','postal_code','nif','logo','description','is_active'];
+    protected $fillable = [
+        'name','slug','email','phone','address','city','postal_code',
+        'district','county','nif','diggov_code','website',
+        'logo','logo_secondary','description','is_active',
+        'primary_color','accent_color',
+        'sidebar_color','header_color','page_bg_color','card_bg_color',
+        'heading_color','text_color','menu_text_color',
+    ];
 
     protected $casts = ['is_active' => 'boolean'];
 
     public function users() { return $this->hasMany(User::class); }
+    public function rolePermissions() { return $this->hasMany(RolePermission::class); }
     public function contacts() { return $this->hasMany(Contact::class); }
     public function tickets() { return $this->hasMany(Ticket::class); }
     public function serviceAreas() { return $this->hasMany(ServiceArea::class); }

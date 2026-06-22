@@ -23,7 +23,7 @@ export default function DocumentsIndex({ documents, filters }: any) {
   return (
     <AdminLayout title="Documentos">
       <Head title="Documentos — JuntaOS" />
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <form onSubmit={e => { e.preventDefault(); applyFilter('search', search) }} className="flex-1 flex gap-2">
             <div className="relative flex-1">
@@ -95,7 +95,7 @@ export default function DocumentsIndex({ documents, filters }: any) {
               <p className="text-sm">Sem documentos encontrados.</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>{['Título','Tipo','Visibilidade','Criado por','Data','Aprovado','Ações'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
@@ -120,7 +120,7 @@ export default function DocumentsIndex({ documents, filters }: any) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       </div>

@@ -7,22 +7,33 @@ use Illuminate\Database\Eloquent\Model;
 class Contact extends Model
 {
     protected $fillable = [
-        'organization_id', 'user_id', 'person_type_id',
-        'name', 'email', 'phone', 'mobile', 'nif',
+        'organization_id', 'user_id', 'person_type_id', 'department_id',
+        'name', 'email', 'phone', 'mobile', 'nif', 'website',
         'address', 'postal_code', 'locality', 'birthdate',
         'type', 'notes', 'avatar', 'is_active',
+        // Campos de funcionário (quando aplicável)
+        'employee_number', 'position', 'hire_date', 'termination_date',
+        'employee_status', 'contract_type', 'emergency_contact', 'emergency_phone',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'birthdate'  => 'date',
+        'is_active'        => 'boolean',
+        'birthdate'        => 'date',
+        'hire_date'        => 'date',
+        'termination_date' => 'date',
     ];
 
     public function organization() { return $this->belongsTo(Organization::class); }
     public function user()         { return $this->belongsTo(User::class); }
     public function personType()   { return $this->belongsTo(PersonType::class); }
+    public function department()   { return $this->belongsTo(Department::class); }
     public function tickets()      { return $this->hasMany(Ticket::class); }
     public function reservations() { return $this->hasMany(SpaceReservation::class); }
+
+    public function isEmployee(): bool
+    {
+        return (bool) ($this->hire_date || $this->employee_number || $this->position);
+    }
 
     public function getDisplayTypeAttribute(): string
     {

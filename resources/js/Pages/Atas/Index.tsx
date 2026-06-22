@@ -24,7 +24,7 @@ export default function AtasIndex({ atas, filters }: any) {
   return (
     <AdminLayout title="Atas">
       <Head title="Atas — JuntaOS" />
-      <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Atas de Reunião</h1>

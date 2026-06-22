@@ -26,7 +26,7 @@ export default function ReservationsIndex({ reservations, spaces, filters }: any
   return (
     <AdminLayout title="Reservas">
       <Head title="Reservas — JuntaOS" />
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex gap-2">
             <select value={filters?.status ?? ''} onChange={e => applyFilter('status', e.target.value)}
@@ -52,7 +52,7 @@ export default function ReservationsIndex({ reservations, spaces, filters }: any
               <p className="text-sm">Sem reservas encontradas.</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>{['Título','Espaço','Requerente','Início','Fim','Estado','Ações'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
@@ -80,7 +80,7 @@ export default function ReservationsIndex({ reservations, spaces, filters }: any
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
           {reservations?.last_page > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">

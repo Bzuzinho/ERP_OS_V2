@@ -70,7 +70,7 @@ export default function ReservationsShow({ reservation }: any) {
   return (
     <AdminLayout title={reservation.title}>
       <Head title={`${reservation.title} — JuntaOS`}/>
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-500">

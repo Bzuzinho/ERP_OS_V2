@@ -32,7 +32,7 @@ export default function SpacesIndex({ spaces }: any) {
   return (
     <AdminLayout title="Espaços">
       <Head title="Espaços — JuntaOS" />
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-end">
           <button onClick={() => { setShowForm(!showForm); setEditing(null); reset() }}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors">

@@ -29,7 +29,7 @@ export default function TicketsIndex({ tickets, filters, serviceAreas, stats }: 
   return (
     <AdminLayout title="Pedidos">
       <Head title="Pedidos — JuntaOS" />
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Total', value: stats?.total ?? 0, color: 'text-gray-700' },
@@ -80,7 +80,7 @@ export default function TicketsIndex({ tickets, filters, serviceAreas, stats }: 
               <Link href="/pedidos/novo" className="mt-4 text-sm text-primary-600 hover:underline">Criar primeiro pedido</Link>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>{['Referência','Título','Estado','Prioridade','Área','Responsável','Data',''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
@@ -100,7 +100,7 @@ export default function TicketsIndex({ tickets, filters, serviceAreas, stats }: 
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
           {tickets?.last_page > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">

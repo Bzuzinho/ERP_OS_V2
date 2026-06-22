@@ -15,7 +15,7 @@ export default function MunicipesIndex({ contacts, personTypes, filters }: any) 
   return (
     <AdminLayout title="Pessoas">
       <Head title="Pessoas — JuntaOS"/>
-      <div className="p-6 max-w-6xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         <div className="flex items-center justify-between">
           <div>

@@ -33,7 +33,7 @@ export default function PlaneamentoRequisicoes({ spacePending, tasksPendingValid
   return (
     <AdminLayout title="Planeamento — Requisições">
       <Head title="Planeamento: Requisições — JuntaOS"/>
-      <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         <div>
           <h1 className="text-xl font-bold text-gray-900">Requisições Pendentes</h1>

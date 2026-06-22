@@ -41,7 +41,7 @@ export default function PlaneamentoRecursos({ teams = [], allocations = [], user
   return (
     <AdminLayout title="Planeamento — Recursos">
       <Head title="Planeamento: Recursos — JuntaOS"/>
-      <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>

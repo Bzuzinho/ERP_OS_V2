@@ -19,14 +19,14 @@ export default function EmployeeCreate({ departments }: any) {
   return (
     <AdminLayout title="Novo Funcionário">
       <Head title="Novo Funcionário — JuntaOS"/>
-      <div className="p-6 max-w-2xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
         <div className="flex items-center gap-3">
           <Link href="/rh" className="p-1.5 rounded-lg hover:bg-gray-100"><ArrowLeft size={18} className="text-gray-600"/></Link>
           <h1 className="text-xl font-bold text-gray-900">Novo Funcionário</h1>
         </div>
 
         <form onSubmit={submit} className="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
-          <div className="p-6 space-y-4">
+          <div className="p-4 md:p-6 space-y-4">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Dados Pessoais</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
@@ -48,7 +48,7 @@ export default function EmployeeCreate({ departments }: any) {
             </div>
           </div>
 
-          <div className="p-6 space-y-4">
+          <div className="p-4 md:p-6 space-y-4">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Contacto</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -63,7 +63,7 @@ export default function EmployeeCreate({ departments }: any) {
             </div>
           </div>
 
-          <div className="p-6 space-y-4">
+          <div className="p-4 md:p-6 space-y-4">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Informação RH</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
@@ -90,7 +90,7 @@ export default function EmployeeCreate({ departments }: any) {
             </div>
           </div>
 
-          <div className="p-6 space-y-4">
+          <div className="p-4 md:p-6 space-y-4">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Emergência</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
@@ -102,7 +102,7 @@ export default function EmployeeCreate({ departments }: any) {
             </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
             <textarea value={data.notes} onChange={e => setData('notes', e.target.value)} rows={3}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"/>

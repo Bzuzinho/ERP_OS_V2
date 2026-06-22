@@ -4,7 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout'
 import {
   ChevronLeft, CheckSquare, Square, Calendar, Plus, X,
   AlertTriangle, Clock, Users, Edit2, Trash2, CalendarDays,
-  TrendingUp, ChevronRight,
+  TrendingUp, ChevronRight, Inbox, Package, MapPin, ShieldAlert,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -44,7 +44,16 @@ function StatusBar({ byStatus, total }: any) {
   )
 }
 
-export default function PlaneamentoShow({ plan, events = [], users = [], teams = [] }: any) {
+const PRIORITY_LABELS: Record<string,string> = { low:'Baixa', medium:'Média', high:'Alta' }
+const ALLOC_STATUS_COLORS: Record<string,string> = {
+  em_uso:'bg-orange-100 text-orange-700', devolvido:'bg-green-100 text-green-700', perdido:'bg-red-100 text-red-700',
+}
+
+export default function PlaneamentoShow({
+  plan, events = [], users = [], teams = [],
+  tasksPendingVal = [], spaceReservations = [],
+  planTeams = [], planAllocations = [],
+}: any) {
   const tasks = plan.tasks ?? []
   const total     = tasks.length
   const completed = tasks.filter((t: any) => t.status === 'completed').length
@@ -94,7 +103,7 @@ export default function PlaneamentoShow({ plan, events = [], users = [], teams =
   return (
     <AdminLayout title={plan.title}>
       <Head title={`${plan.title} — JuntaOS`}/>
-      <div className="p-6 max-w-6xl mx-auto space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -301,15 +310,21 @@ export default function PlaneamentoShow({ plan, events = [], users = [], teams =
 
           {/* Sidebar */}
           <div className="space-y-4">
-            {/* Events in plan period */}
-            {events.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                  <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5"><CalendarDays size={13} className="text-gray-400"/>Eventos no período</h3>
-                  <Link href="/agenda" className="text-xs text-primary-600 hover:text-primary-700">Ver agenda →</Link>
-                </div>
+            {/* Events linked to this plan */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5">
+                  <CalendarDays size={13} className="text-gray-400"/>
+                  Eventos do plano
+                  {events.length > 0 && <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">{events.length}</span>}
+                </h3>
+                <Link href="/agenda" className="text-xs text-primary-600 hover:text-primary-700">Agenda →</Link>
+              </div>
+              {events.length === 0 ? (
+                <p className="px-4 py-5 text-xs text-gray-400 text-center">Sem eventos associados a este plano.</p>
+              ) : (
                 <div className="divide-y divide-gray-50">
-                  {events.slice(0,6).map((e: any) => (
+                  {events.map((e: any) => (
                     <Link key={e.id} href={`/agenda/${e.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group">
                       <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: e.color ?? '#0284c7' }}/>
                       <div className="flex-1 min-w-0">
@@ -319,37 +334,99 @@ export default function PlaneamentoShow({ plan, events = [], users = [], teams =
                       <span className={clsx('text-xs px-1.5 py-0.5 rounded-full', EVENT_TYPE_COLORS[e.type] ?? 'bg-gray-100 text-gray-600')}>{e.type}</span>
                     </Link>
                   ))}
-                  {events.length > 6 && (
-                    <div className="px-4 py-2 text-xs text-gray-400 text-center">+{events.length - 6} eventos</div>
-                  )}
                 </div>
-              </div>
-            )}
-
-            {/* Quick stats */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resumo</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label:'Total', value: total, color:'text-gray-800' },
-                  { label:'Concluídas', value: byStatus['completed'] ?? 0, color:'text-green-700' },
-                  { label:'Em progresso', value: byStatus['in_progress'] ?? 0, color:'text-blue-700' },
-                  { label:'Pendentes', value: byStatus['pending'] ?? 0, color:'text-yellow-700' },
-                ].map(s => (
-                  <div key={s.label} className="text-center bg-gray-50 rounded-lg p-2.5">
-                    <p className={clsx('text-xl font-bold', s.color)}>{s.value}</p>
-                    <p className="text-xs text-gray-400">{s.label}</p>
-                  </div>
-                ))}
-              </div>
+              )}
             </div>
 
-            {/* Link to tasks list filtered */}
-            <Link href={`/tarefas?plan_id=${plan.id}`}
-              className="flex items-center justify-between bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 hover:bg-primary-100 transition-colors">
-              <span className="text-sm text-primary-700 font-medium">Ver todas as tarefas</span>
-              <ChevronRight size={14} className="text-primary-600"/>
-            </Link>
+            {/* ── Requisições ──────────────────────────────────────── */}
+            <div className="bg-white rounded-xl border border-yellow-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-yellow-100 bg-yellow-50/60">
+                <h3 className="font-semibold text-sm text-yellow-800 flex items-center gap-1.5">
+                  <Inbox size={13} className="text-yellow-600"/>
+                  Requisições
+                  {(tasksPendingVal.length + spaceReservations.length) > 0 && (
+                    <span className="ml-1 text-xs bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded-full font-semibold">
+                      {tasksPendingVal.length + spaceReservations.length}
+                    </span>
+                  )}
+                </h3>
+                <Link href="/planeamento/requisicoes" className="text-xs text-yellow-700 hover:text-yellow-900">Ver todas →</Link>
+              </div>
+              {(tasksPendingVal.length + spaceReservations.length) === 0 ? (
+                <p className="px-4 py-5 text-xs text-gray-400 text-center">Sem requisições pendentes neste plano.</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {spaceReservations.map((r: any) => (
+                    <Link key={`res-${r.id}`} href={`/reservas/${r.id}`}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group">
+                      <MapPin size={13} className="text-yellow-500 flex-shrink-0"/>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate group-hover:text-primary-700">{r.title}</p>
+                        <p className="text-xs text-gray-400">{r.space?.name} · {new Date(r.starts_at).toLocaleDateString('pt-PT', { day:'2-digit', month:'short' })}</p>
+                      </div>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 flex-shrink-0">Espaço</span>
+                    </Link>
+                  ))}
+                  {tasksPendingVal.map((t: any) => (
+                    <Link key={`task-${t.id}`} href={`/tarefas/${t.id}`}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group">
+                      <ShieldAlert size={13} className="text-blue-500 flex-shrink-0"/>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate group-hover:text-primary-700">{t.title}</p>
+                        <p className="text-xs text-gray-400">{t.assignee?.name ?? '—'} · {PRIORITY_LABELS[t.priority] ?? t.priority}</p>
+                      </div>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 flex-shrink-0">Validar</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Recursos ─────────────────────────────────────────── */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5">
+                  <Package size={13} className="text-gray-400"/>
+                  Recursos
+                  {(planTeams.length + planAllocations.length) > 0 && (
+                    <span className="ml-1 text-xs bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full font-semibold">
+                      {planTeams.length + planAllocations.length}
+                    </span>
+                  )}
+                </h3>
+                <Link href="/planeamento/recursos" className="text-xs text-primary-600 hover:text-primary-700">Ver todos →</Link>
+              </div>
+              {(planTeams.length + planAllocations.length) === 0 ? (
+                <p className="px-4 py-5 text-xs text-gray-400 text-center">Sem equipas ou materiais afetos a este plano.</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {planTeams.map((t: any) => (
+                    <Link key={`team-${t.id}`} href={`/equipas/${t.id}`}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group">
+                      <Users size={13} className="text-primary-400 flex-shrink-0"/>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate group-hover:text-primary-700">{t.name}</p>
+                        <p className="text-xs text-gray-400">{t.members?.length ?? 0} membros{t.leader ? ` · ${t.leader.name}` : ''}</p>
+                      </div>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 flex-shrink-0">Equipa</span>
+                    </Link>
+                  ))}
+                  {planAllocations.map((a: any) => (
+                    <div key={`alloc-${a.id}`} className="flex items-center gap-3 px-4 py-2.5">
+                      <Package size={13} className="text-orange-400 flex-shrink-0"/>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate">{a.item?.name ?? '—'} × {a.quantity}</p>
+                        {a.task && <p className="text-xs text-gray-400 truncate">{a.task.title}</p>}
+                      </div>
+                      <span className={clsx('text-xs px-1.5 py-0.5 rounded-full flex-shrink-0', ALLOC_STATUS_COLORS[a.status] ?? 'bg-gray-100 text-gray-500')}>
+                        {a.status?.replace('_',' ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
