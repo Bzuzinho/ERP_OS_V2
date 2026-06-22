@@ -420,8 +420,8 @@ class DatabaseSeeder extends Seeder
         foreach ($checklistData as $tIdx => $items) {
             foreach ($items as $order => [$desc,$done]) {
                 TaskChecklistItem::firstOrCreate(
-                    ['task_id'=>$tarefas[$tIdx]->id,'description'=>$desc],
-                    ['is_done'=>$done,'sort_order'=>$order,'created_by'=>$admin->id]
+                    ['task_id'=>$tarefas[$tIdx]->id,'title'=>$desc],
+                    ['is_completed'=>$done,'sort_order'=>$order]
                 );
             }
         }
