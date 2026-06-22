@@ -126,7 +126,7 @@ class DatabaseSeeder extends Seeder
                 'hire_date'       => $empNum ? $now->copy()->subYears(rand(1,8)) : null,
                 'employee_status' => $empNum ? 'ativo' : null,
                 'is_active'       => true,
-                'type'            => 'pessoa',
+                'type'            => 'munícipe',
             ]);
         }
 
@@ -141,13 +141,19 @@ class DatabaseSeeder extends Seeder
             ['TechSoft Lda.',                 'info@techsoft.pt',     '213 000 020', $ptEmpresa->id   ],
         ];
 
+        $ptTypeMap = [
+            $ptAssociacao->id => 'associação',
+            $ptFornecedor->id => 'fornecedor',
+            $ptEmpresa->id    => 'empresa',
+        ];
+
         foreach ($dadosEntidades as [$name,$email,$phone,$ptId]) {
             $entidades[] = Contact::firstOrCreate(['organization_id'=>$oid,'email'=>$email],[
                 'name'           => $name,
                 'phone'          => $phone,
                 'person_type_id' => $ptId,
                 'is_active'      => true,
-                'type'           => 'entidade',
+                'type'           => $ptTypeMap[$ptId] ?? 'outro',
             ]);
         }
 
