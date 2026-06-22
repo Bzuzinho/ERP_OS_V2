@@ -14,19 +14,19 @@ nixPkgs = [
   "php83Extensions.zip",
   "php83Extensions.intl",
   "php83Extensions.bcmath",
+  "php83Packages.composer",
   "nodejs_20",
   "nodePackages.npm",
 ]
 
 [phases.install]
 cmds = [
-  "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
   "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist",
-  "npm ci --prefer-offline",
+  "npm ci",
 ]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [start]
-cmd = "php artisan migrate --force && php artisan storage:link --force 2>/dev/null || true && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"
+cmd = "php artisan migrate --force && (php artisan storage:link --force 2>/dev/null || true) && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"
