@@ -35,8 +35,19 @@ return new class extends Migration
         DB::statement("UPDATE person_types SET category = 'pessoa' WHERE category IN ('externo', 'interno')");
 
         // ── Semear tipos padrão (se não existirem) ────────────────────────────
-        $now   = now();
-        $orgId = 1;
+        $now = now();
+
+        // Garantir que existe pelo menos uma organização (base de dados nova)
+        $orgId = DB::table('organizations')->value('id');
+        if (!$orgId) {
+            $orgId = DB::table('organizations')->insertGetId([
+                'name'       => 'Junta de Freguesia',
+                'slug'       => 'junta',
+                'is_active'  => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
 
         $defaults = [
             // Pessoas naturais
