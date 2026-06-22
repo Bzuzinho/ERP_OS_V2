@@ -210,12 +210,12 @@ class DatabaseSeeder extends Seeder
         // ── Espaços ───────────────────────────────────────────────────────────
         $espacos = [];
         foreach ([
-            ['Salão Nobre',          'salão',         200, true ],
-            ['Sala de Reuniões A',   'sala_reunioes',  20, false],
-            ['Sala de Reuniões B',   'sala_reunioes',  15, false],
-            ['Auditório Municipal',  'auditório',     120, true ],
-            ['Campo Desportivo',     'campo',         500, true ],
-            ['Jardim da Freguesia',  'jardim',       1000, true ],
+            ['Salão Nobre',          'salão',           200, true ],
+            ['Sala de Reuniões A',   'sala_reuniões',   20, false],
+            ['Sala de Reuniões B',   'sala_reuniões',   15, false],
+            ['Auditório Municipal',  'auditório',       120, true ],
+            ['Campo Desportivo',     'campo',           500, true ],
+            ['Jardim da Freguesia',  'espaço_público', 1000, true ],
         ] as [$name,$type,$cap,$public]) {
             $espacos[] = Space::firstOrCreate(['organization_id'=>$oid,'name'=>$name],[
                 'type'      => $type,
@@ -291,7 +291,7 @@ class DatabaseSeeder extends Seeder
             ['Pedido de licença de ruído para evento',     'em_analise',   'normal', 'email',      $entidades[0]->id,$areas[3]->id,$exec->id, 'pedido'     ],
             ['Reclamação sobre frequência de recolha',     'resolvido',    'normal', 'portal',     $pessoas[2]->id, $areas[2]->id, $op2->id,  'reclamacao' ],
             ['Pedido de certidão de residência',           'encerrado',    'baixa',  'presencial', $pessoas[3]->id, $areas[4]->id, $op2->id,  'pedido'     ],
-            ['Árvore caída junto ao jardim público',       'com_tarefas',  'urgente','telefone',   $pessoas[4]->id, $areas[1]->id, $op1->id,  'incidente'  ],
+            ['Árvore caída junto ao jardim público',       'em_progresso', 'urgente','telefone',   $pessoas[4]->id, $areas[1]->id, $op1->id,  'incidente'  ],
             ['Pavimento danificado na Av. Principal',      'em_progresso', 'alta',   'email',      $pessoas[0]->id, $areas[1]->id, $op1->id,  'reclamacao' ],
             ['Pedido de apoio para evento desportivo',     'em_analise',   'normal', 'portal',     $entidades[1]->id,$areas[5]->id,$exec->id, 'pedido'     ],
             ['Graffiti em parede patrimonial',             'aberto',       'alta',   'presencial', $pessoas[1]->id, $areas[1]->id, $op2->id,  'reclamacao' ],
@@ -333,11 +333,11 @@ class DatabaseSeeder extends Seeder
         // ── Planos Operacionais ───────────────────────────────────────────────
         $planos = [];
         $planosData = [
-            ['Reabilitação do Parque Urbano Central',          2026, 'ativo',    $areas[3]->id, $exec->id,  45000, 35],
-            ['Programa de Higiene Urbana Semestral',           2026, 'ativo',    $areas[2]->id, $op1->id,   12000, 60],
-            ['Renovação da Iluminação Pública',                2026, 'planeado', $areas[1]->id, $exec->id,  80000,  0],
-            ['Semana Cultural 2026',                           2026, 'ativo',    $areas[5]->id, $exec->id,   8500, 20],
-            ['Manutenção Preventiva de Infraestruturas 2025',  2025, 'concluido',$areas[1]->id, $op1->id,   30000,100],
+            ['Reabilitação do Parque Urbano Central',          2026, 'em_execução', $areas[3]->id, $exec->id,  45000, 35],
+            ['Programa de Higiene Urbana Semestral',           2026, 'em_execução', $areas[2]->id, $op1->id,   12000, 60],
+            ['Renovação da Iluminação Pública',                2026, 'pendente',    $areas[1]->id, $exec->id,  80000,  0],
+            ['Semana Cultural 2026',                           2026, 'em_execução', $areas[5]->id, $exec->id,   8500, 20],
+            ['Manutenção Preventiva de Infraestruturas 2025',  2025, 'concluído',   $areas[1]->id, $op1->id,   30000,100],
         ];
 
         foreach ($planosData as [$title,$year,$status,$areaId,$managerId,$budget,$progress]) {
@@ -433,7 +433,7 @@ class DatabaseSeeder extends Seeder
             ['Reunião de Executivo — Junho',    'reunião',  'interno', $now->copy()->addDays(2)->setHour(10), $now->copy()->addDays(2)->setHour(12),  '#7c3aed', null           ],
             ['Dia da Freguesia 2026',           'público',  'público', $now->copy()->addDays(18)->setHour(10),$now->copy()->addDays(18)->setHour(20),  '#16a34a', $planos[3]->id ],
             ['Manutenção Preventiva Semanal',   'interno',  'interno', $now->copy()->addDays(1)->setHour(8),  $now->copy()->addDays(1)->setHour(17),   '#dc2626', $planos[1]->id ],
-            ['Sessão de Atendimento Alargado',  'publico',  'público', $now->copy()->addDays(4)->setHour(9),  $now->copy()->addDays(4)->setHour(13),   '#0284c7', null           ],
+            ['Sessão de Atendimento Alargado',  'público',  'público', $now->copy()->addDays(4)->setHour(9),  $now->copy()->addDays(4)->setHour(13),   '#0284c7', null           ],
             ['Workshop Empreendedorismo Local', 'público',  'público', $now->copy()->addDays(25)->setHour(14),$now->copy()->addDays(25)->setHour(17),  '#0891b2', $planos[3]->id ],
             ['Reunião com Associações Locais',  'reunião',  'interno', $now->copy()->addDays(7)->setHour(15), $now->copy()->addDays(7)->setHour(17),   '#b45309', null           ],
             ['Assembleia de Freguesia',         'reunião',  'público', $now->copy()->addDays(5)->setHour(21), $now->copy()->addDays(5)->setHour(23),   '#1d4ed8', null           ],
@@ -479,9 +479,9 @@ class DatabaseSeeder extends Seeder
             ['Ata da Reunião de Executivo — Fevereiro 2026', 'ata',          '2026-02-12', true ],
             ['Ata da Assembleia de Freguesia — Janeiro 2026','ata',          '2026-01-15', true ],
             ['Regulamento de Utilização de Espaços',         'regulamento',  null,         true ],
-            ['Plano de Atividades 2026',                     'plano',        null,         true ],
-            ['Orçamento 2026',                               'orcamento',    null,         true ],
-            ['Relatório de Atividades 2025',                 'relatorio',    null,         true ],
+            ['Plano de Atividades 2026',                     'outro',        null,         true ],
+            ['Orçamento 2026',                               'outro',        null,         true ],
+            ['Relatório de Atividades 2025',                 'outro',        null,         true ],
             ['Regulamento Interno de Pessoal',               'regulamento',  null,         false],
         ];
 
