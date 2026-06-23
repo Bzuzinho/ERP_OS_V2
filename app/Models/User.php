@@ -13,7 +13,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name','email','password','phone','department','is_active',
-        'organization_id','avatar','role',
+        'organization_id','avatar','role','contact_id',
     ];
 
     protected $hidden = ['password','remember_token'];
@@ -25,8 +25,10 @@ class User extends Authenticatable
     ];
 
     public function organization() { return $this->belongsTo(Organization::class); }
+    // Pessoa principal: users.contact_id → contacts.id
+    public function contact() { return $this->belongsTo(Contact::class); }
+    // Compat legado: employee ligado via user_id
     public function employee() { return $this->hasOne(Employee::class); }
-    public function contact() { return $this->hasOne(Contact::class); }
     public function tasks() { return $this->hasMany(Task::class, 'assigned_to'); }
     public function assignedTickets() { return $this->hasMany(Ticket::class, 'assigned_to'); }
     public function serviceAreas() { return $this->belongsToMany(ServiceArea::class, 'service_area_user'); }
@@ -48,7 +50,4 @@ class User extends Authenticatable
     public function unreadMessagesCount(): int
     {
         return Conversation::whereHas('participants', fn($q) => $q->where('user_id', $this->id))
-            ->get()
-            ->sum(fn($c) => $c->load(['participantRecords', 'messages'])->unreadCount($this->id));
-    }
-}
+   

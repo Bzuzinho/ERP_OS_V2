@@ -94,9 +94,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/pessoas/{contact}',                              [PersonController::class, 'update'])->name('pessoas.update');
     Route::delete('/pessoas/{contact}',                             [PersonController::class, 'destroy'])->name('pessoas.destroy');
     // Conta de acesso da pessoa
-    Route::post('/pessoas/{contact}/link-user',                     [PersonController::class, 'linkUser'])->name('pessoas.link-user');
-    Route::delete('/pessoas/{contact}/unlink-user',                 [PersonController::class, 'unlinkUser'])->name('pessoas.unlink-user');
     Route::post('/pessoas/{contact}/criar-conta',                   [PersonController::class, 'createUserAccount'])->name('pessoas.criar-conta');
+    Route::patch('/pessoas/{contact}/acesso',                       [PersonController::class, 'updateUserAccount'])->name('pessoas.update-acesso');
+    Route::delete('/pessoas/{contact}/remover-conta',               [PersonController::class, 'unlinkUser'])->name('pessoas.remover-conta');
 
     // Entidades (organizações: fornecedores, instituições, parceiros, etc.)
     Route::get('/entidades',                                        [EntityController::class, 'index'])->name('entidades.index');
@@ -251,4 +251,4 @@ Route::middleware('auth')->group(function () {
 
 });
 
-Route::fallback(fn() => Inertia::render('404'));
+Route::fallback(fn() => Inertia::r

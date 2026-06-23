@@ -4,9 +4,9 @@ import AdminLayout from '@/Layouts/AdminLayout'
 import axios from 'axios'
 import clsx from 'clsx'
 import {
-  Building2, Users, Shield, Upload, X, Plus, Edit2, Trash2,
+  Building2, Shield, Upload, X, Trash2,
   Check, Palette, Save, Image as ImageIcon,
-  ChevronDown, ChevronUp, Link2, FileImage,
+  ChevronDown, ChevronUp, FileImage,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ interface Org {
   logo?: string; logo_secondary?: string
   logo_url?: string | null; logo_secondary_url?: string | null
 }
-interface UserRow { id: number; name: string; email: string; role: string; is_active: boolean; created_at: string; contact?: any }
+
 type PermMatrix = Record<string, Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }>>
 
 const ROLE_LABELS: Record<string, string> = {
@@ -386,218 +386,6 @@ function GeralSection({ org }: { org: Org | null }) {
   )
 }
 
-// ─── Formulário de utilizador ─────────────────────────────────────────────────
-function UserForm({ onClose, initial, pessoasWithoutUser = [] }: {
-  onClose: () => void; initial?: any; pessoasWithoutUser?: any[]
-}) {
-  const isEdit = !!initial
-  const linkedContact = initial?.contact ?? null
-
-  const { data, setData, post, patch, processing, errors } = useForm({
-    name:       initial?.name  ?? '',
-    email:      initial?.email ?? '',
-    password:   '',
-    role:       initial?.role  ?? 'operacional',
-    is_active:  initial?.is_active ?? true,
-    contact_id: linkedContact?.id?.toString() ?? '',
-  })
-
-  function handleContactChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const id = e.target.value
-    setData('contact_id', id)
-    if (!isEdit && id) {
-      const p = pessoasWithoutUser.find((p: any) => p.id.toString() === id)
-      if (p) {
-        if (!data.name)  setData('name',  p.name)
-        if (!data.email && p.email) setData('email', p.email)
-      }
-    }
-  }
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault()
-    if (isEdit) patch(`/configuracoes/usuarios/${initial.id}`)
-    else        post('/configuracoes/usuarios')
-  }
-
-  const pessoaOptions = isEdit && linkedContact
-    ? [linkedContact, ...pessoasWithoutUser.filter((p: any) => p.id !== linkedContact.id)]
-    : pessoasWithoutUser
-
-  return (
-    <form onSubmit={submit} className="bg-white rounded-xl border border-primary-200 shadow-sm p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-800">{isEdit ? `Editar — ${initial.name}` : 'Novo Utilizador'}</h3>
-        <button type="button" onClick={onClose}><X size={16} className="text-gray-400"/></button>
-      </div>
-
-      {/* Pessoa associada */}
-      <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
-        <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-          <Link2 size={13} className="text-blue-500"/> Pessoa associada
-          <span className="text-xs font-normal text-gray-400 ml-1">(opcional)</span>
-        </label>
-        {pessoaOptions.length > 0 ? (
-          <select value={data.contact_id} onChange={handleContactChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-            <option value="">— Sem pessoa associada —</option>
-            {pessoaOptions.map((p: any) => (
-              <option key={p.id} value={p.id}>{p.name}{p.email ? ` (${p.email})` : ''}</option>
-            ))}
-          </select>
-        ) : (
-          <p className="text-xs text-gray-400 italic py-1">Sem pessoas disponíveis para associar.</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-          <input value={data.name} onChange={e => setData('name', e.target.value)} required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"/>
-          {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-          <input type="email" value={data.email} onChange={e => setData('email', e.target.value)} required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"/>
-          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {isEdit ? 'Nova Password (opcional)' : 'Password *'}
-          </label>
-          <input type="password" value={data.password} onChange={e => setData('password', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            required={!isEdit}/>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Perfil *</label>
-          <select value={data.role} onChange={e => setData('role', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-            <option value="admin">Administrador</option>
-            <option value="executivo">Executivo</option>
-            <option value="administrativo">Administrativo</option>
-            <option value="operacional">Operacional</option>
-          </select>
-        </div>
-        {isEdit && (
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer col-span-2">
-            <input type="checkbox" checked={data.is_active}
-              onChange={e => setData('is_active', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600"/>
-            Conta ativa
-          </label>
-        )}
-      </div>
-
-      <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-        <button type="button" onClick={onClose}
-          className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
-        <button type="submit" disabled={processing}
-          className="px-5 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg">
-          {processing ? 'A guardar…' : (isEdit ? 'Guardar' : 'Criar')}
-        </button>
-      </div>
-    </form>
-  )
-}
-
-// ─── Secção: Utilizadores ─────────────────────────────────────────────────────
-function UtilizadoresSection({ users, pessoasWithoutUser }: { users: UserRow[]; pessoasWithoutUser: any[] }) {
-  const [showCreate, setShowCreate] = useState(false)
-  const [editId, setEditId] = useState<number | null>(null)
-
-  function destroy(u: UserRow) {
-    if (confirm(`Eliminar "${u.name}"?`)) router.delete(`/configuracoes/usuarios/${u.id}`)
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{users.length} utilizador(es) registados</p>
-        <button onClick={() => { setShowCreate(true); setEditId(null) }}
-          className="flex items-center gap-2 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg">
-          <Plus size={15}/> Novo Utilizador
-        </button>
-      </div>
-
-      {showCreate && (
-        <UserForm onClose={() => setShowCreate(false)} pessoasWithoutUser={pessoasWithoutUser}/>
-      )}
-
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Utilizador</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Perfil</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600 hidden md:table-cell">Estado</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600 hidden lg:table-cell">Criado</th>
-              <th className="px-4 py-3"/>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {users.map(u => (
-              <React.Fragment key={u.id}>
-                <tr className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                        {u.name[0]?.toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{u.name}</p>
-                        <p className="text-xs text-gray-400">{u.email}</p>
-                        {u.contact && (
-                          <p className="text-xs text-blue-600 flex items-center gap-0.5 mt-0.5">
-                            <Link2 size={10}/> {u.contact.name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium',
-                      ROLE_COLORS[u.role] ?? 'bg-gray-100 text-gray-600')}>
-                      {ROLE_LABELS[u.role] ?? u.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <span className={clsx('flex items-center gap-1 text-xs font-medium',
-                      u.is_active ? 'text-green-600' : 'text-gray-400')}>
-                      <span className={clsx('w-1.5 h-1.5 rounded-full', u.is_active ? 'bg-green-500' : 'bg-gray-300')}/>
-                      {u.is_active ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell">
-                    {new Date(u.created_at).toLocaleDateString('pt-PT')}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => setEditId(editId === u.id ? null : u.id)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"><Edit2 size={14}/></button>
-                      <button onClick={() => destroy(u)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600"><Trash2 size={14}/></button>
-                    </div>
-                  </td>
-                </tr>
-                {editId === u.id && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-3 bg-gray-50">
-                      <UserForm initial={u} onClose={() => setEditId(null)} pessoasWithoutUser={pessoasWithoutUser}/>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
 // ─── Secção: Perfis & Acessos ─────────────────────────────────────────────────
 const PERM_ROLE_DESC: Record<string, string> = {
   executivo:      'Aprova e supervisiona. Pode ver e editar tudo por omissão.',
@@ -732,12 +520,10 @@ function PerfisSection({
 
 // --- Pagina principal ---
 export default function SettingsIndex({
-  section, institution, users, pessoasWithoutUser, rolePermissions, modules, roles,
+  section, institution, rolePermissions, modules, roles,
 }: {
-  section: 'geral' | 'utilizadores' | 'perfis'
+  section: 'geral' | 'perfis'
   institution: any
-  users: UserRow[]
-  pessoasWithoutUser: any[]
   rolePermissions: PermMatrix
   modules: Record<string,string>
   roles: string[]
@@ -747,13 +533,7 @@ export default function SettingsIndex({
       <Head title="Configuracoes"/>
       <AdminLayout title="Configuracoes">
         <div className="max-w-4xl mx-auto space-y-6">
-          {section === 'geral'       && <GeralSection org={institution}/>}
-          {section === 'utilizadores' && (
-            <UtilizadoresSection
-              users={users}
-              pessoasWithoutUser={pessoasWithoutUser}
-            />
-          )}
+          {section === 'geral'  && <GeralSection org={institution}/>}
           {section === 'perfis' && (
             <PerfisSection
               matrix={rolePermissions}
@@ -766,3 +546,4 @@ export default function SettingsIndex({
     </>
   )
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            

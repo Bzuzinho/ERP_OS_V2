@@ -33,22 +33,22 @@ class SettingsController extends Controller
     {
         $org = Organization::find(1);
 
-        // Pessoas sem conta de acesso (para o selector no UserForm)
-        $linkedContactIds = \App\Models\Contact::whereNotNull('user_id')->pluck('user_id');
-        $pessoasWithoutUser = \App\Models\Contact::whereNull('user_id')
-            ->whereHas('personType', fn($q) => $q->where('category', 'pessoa'))
+        // Contacts sem conta de acesso (para dar acesso a novas pessoas)
+        $pessoasWithoutUser = \App\Models\Contact::whereDoesntHave('user')
+            ->where('organization_id', 1)
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'person_type_id']);
 
         return [
-            'institution'       => $org,
-            'users'             => User::with('contact:id,user_id,name,person_type_id')
-                                       ->orderBy('name')
-                                       ->get(['id','name','email','role','is_active','created_at']),
-            'pessoasWithoutUser'=> $pessoasWithoutUser,
-            'rolePermissions'   => RolePermission::matrix(1),
-            'modules'           => RolePermission::modules(),
-            'roles'             => RolePermission::configurableRoles(),
+            'institution'        => $org,
+            'users'              => User::with('contact:id,name,email,person_type_id,avatar')
+                                        ->where('organization_id', 1)
+                                        ->orderBy('name')
+                                        ->get(['id','name','email','role','is_active','contact_id','created_at']),
+            'pessoasWithoutUser' => $pessoasWithoutUser,
+            'rolePermissions'    => RolePermission::matrix(1),
+            'modules'            => RolePermission::modules(),
+            'roles'              => RolePermission::configurableRoles(),
         ];
     }
 
@@ -158,68 +158,46 @@ class SettingsController extends Controller
     public function storeUser(Request $request)
     {
         $data = $request->validate([
-            'name'       => 'required|string|max:255',
-            'email'      => 'required|email|unique:users,email',
+            'contact_id' => 'required|exists:contacts,id',
             'password'   => 'required|min:8',
             'role'       => 'required|in:admin,executivo,administrativo,operacional',
-            'contact_id' => 'nullable|exists:contacts,id',
         ]);
 
-        $user = User::create([
-            'name'            => $data['name'],
-            'email'           => $data['email'],
+        $contact = \App\Models\Contact::findOrFail($data['contact_id']);
+
+        // Verificar que o contact ainda não tem conta
+        if ($contact->user()->exists()) {
+            return back()->withErrors(['error' => 'Esta pessoa já tem conta de acesso.']);
+        }
+
+        User::create([
+            'name'            => $contact->name,
+            'email'           => $contact->email,
             'password'        => Hash::make($data['password']),
             'role'            => $data['role'],
             'organization_id' => 1,
             'is_active'       => true,
+            'contact_id'      => $contact->id,
         ]);
 
-        // Ligar à pessoa se indicada
-        if (!empty($data['contact_id'])) {
-            \App\Models\Contact::where('id', $data['contact_id'])
-                ->whereNull('user_id')
-                ->update(['user_id' => $user->id]);
-        }
-
-        return back()->with('message', 'Utilizador criado com sucesso.');
+        return back()->with('message', 'Acesso criado para ' . $contact->name . '.');
     }
 
     public function updateUser(Request $request, User $user)
     {
         $data = $request->validate([
-            'name'       => 'required|string|max:255',
-            'email'      => 'required|email|unique:users,email,'.$user->id,
-            'role'       => 'required|in:admin,executivo,administrativo,operacional',
-            'is_active'  => 'boolean',
-            'password'   => 'nullable|min:8',
-            'contact_id' => 'nullable|exists:contacts,id',
+            'role'      => 'required|in:admin,executivo,administrativo,operacional',
+            'is_active' => 'boolean',
+            'password'  => 'nullable|min:8',
         ]);
 
         $user->update([
-            'name'      => $data['name'],
-            'email'     => $data['email'],
             'role'      => $data['role'],
             'is_active' => $data['is_active'] ?? $user->is_active,
-            ...($data['password'] ? ['password' => Hash::make($data['password'])] : []),
+            ...(!empty($data['password']) ? ['password' => Hash::make($data['password'])] : []),
         ]);
 
-        // Gerir ligação à pessoa
-        $contactId = $data['contact_id'] ?? null;
-        $currentContact = $user->contact; // hasOne via user_id
-
-        if ($contactId && (!$currentContact || $currentContact->id != $contactId)) {
-            // Desligar o anterior se existir
-            if ($currentContact) $currentContact->update(['user_id' => null]);
-            // Ligar ao novo (só se ainda não estiver ligado a outro user)
-            \App\Models\Contact::where('id', $contactId)
-                ->whereNull('user_id')
-                ->update(['user_id' => $user->id]);
-        } elseif (!$contactId && $currentContact) {
-            // Campo limpo = desligar
-            $currentContact->update(['user_id' => null]);
-        }
-
-        return back()->with('message', 'Utilizador atualizado.');
+        return back()->with('message', 'Acesso de ' . $user->name . ' atualizado.');
     }
 
     public function destroyUser(User $user)
@@ -229,8 +207,7 @@ class SettingsController extends Controller
         }
 
         try {
-            // Desligar pessoa associada
-            \App\Models\Contact::where('user_id', $user->id)->update(['user_id' => null]);
+            // O contact fica — só se remove a conta de acesso (user.contact_id limpa-se ao apagar)
 
             // Nullify FK references that don't auto-nullify
             \Illuminate\Support\Facades\DB::table('tickets')->where('created_by', $user->id)->update(['created_by' => null]);

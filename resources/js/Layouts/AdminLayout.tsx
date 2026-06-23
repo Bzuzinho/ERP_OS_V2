@@ -58,10 +58,9 @@ export const SUB_NAV: Record<string, { label: string; href: string }[]> = {
   '/planeamento/agenda':      [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
   '/planeamento/requisicoes': [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
 
-  '/configuracoes':              [{ label:'Geral', href:'/configuracoes' }, { label:'Utilizadores', href:'/configuracoes/utilizadores' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
-  '/configuracoes/utilizadores': [{ label:'Geral', href:'/configuracoes' }, { label:'Utilizadores', href:'/configuracoes/utilizadores' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
-  '/configuracoes/perfis':       [{ label:'Geral', href:'/configuracoes' }, { label:'Utilizadores', href:'/configuracoes/utilizadores' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
-  '/configuracoes/tipos-pessoa': [{ label:'Geral', href:'/configuracoes' }, { label:'Utilizadores', href:'/configuracoes/utilizadores' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
+  '/configuracoes':              [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
+  '/configuracoes/perfis':       [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
+  '/configuracoes/tipos-pessoa': [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
 }
 
 export function SubNav() {
@@ -141,9 +140,8 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
     const second = pathname.split('/').filter(Boolean)[1]
     const SUB_NAV: Record<string, { label: string; href: string }[]> = {
       '/configuracoes': [
-        { label: 'Geral',       href: '/configuracoes' },
-        { label: 'Utilizadores', href: '/configuracoes/utilizadores' },
-        { label: 'Perfis',      href: '/configuracoes/perfis' },
+        { label: 'Geral',   href: '/configuracoes' },
+        { label: 'Perfis',  href: '/configuracoes/perfis' },
       ],
       '/planeamento': [
         { label: 'Planos',     href: '/planeamento' },

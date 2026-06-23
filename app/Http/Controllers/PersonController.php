@@ -100,74 +100,75 @@ class PersonController extends Controller
     public function show(Contact $contact)
     {
         $contact->load([
-            'personType', 'user', 'department',
-            'tickets' => fn($q) => $q->latest()->limit(10),
+            'personType', 'user', 'employee.department', 'department',
+            'tickets'      => fn($q) => $q->latest()->limit(10),
             'reservations' => fn($q) => $q->latest()->limit(5),
         ]);
-
-        // Utilizadores que ainda não têm nenhuma pessoa ligada (para o selector de ligação)
-        $linkedUserIds = Contact::whereNotNull('user_id')->pluck('user_id');
-        $freeUsers = User::whereNotIn('id', $linkedUserIds)
-            ->orderBy('name')
-            ->get(['id', 'name', 'email', 'role']);
 
         return Inertia::render('Pessoas/Show', [
             'contact'     => $contact,
             'personTypes' => $this->pessoaTypes(),
             'departments' => Department::where('organization_id', 1)->orderBy('name')->get(['id', 'name']),
-            'freeUsers'   => $freeUsers,
         ]);
     }
 
     // ── Conta de acesso ───────────────────────────────────────────────────────
 
-    /** Liga esta pessoa a um utilizador já existente */
-    public function linkUser(Request $request, Contact $contact)
-    {
-        $request->validate(['user_id' => 'required|exists:users,id']);
-
-        // Garantir que o utilizador não está já ligado a outra pessoa
-        $already = Contact::where('user_id', $request->user_id)
-            ->where('id', '!=', $contact->id)
-            ->first();
-
-        if ($already) {
-            return back()->withErrors(['user_id' => "Este utilizador já está ligado a \"{$already->name}\"."]);
-        }
-
-        $contact->update(['user_id' => $request->user_id]);
-
-        return back()->with('message', 'Utilizador associado com sucesso.');
-    }
-
-    /** Remove a ligação entre esta pessoa e o seu utilizador */
-    public function unlinkUser(Contact $contact)
-    {
-        $contact->update(['user_id' => null]);
-        return back()->with('message', 'Ligação à conta de acesso removida.');
-    }
-
-    /** Cria uma nova conta de utilizador a partir dos dados desta pessoa e liga-a */
+    /** Cria nova conta de acesso para esta pessoa */
     public function createUserAccount(Request $request, Contact $contact)
     {
+        if ($contact->user()->exists()) {
+            return back()->withErrors(['error' => 'Esta pessoa já tem conta de acesso.']);
+        }
+
         $request->validate([
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|min:8',
             'role'     => 'required|in:admin,executivo,administrativo,operacional',
         ]);
 
-        $user = User::create([
+        User::create([
             'name'            => $contact->name,
             'email'           => $request->email,
             'password'        => Hash::make($request->password),
             'role'            => $request->role,
             'organization_id' => 1,
             'is_active'       => true,
+            'contact_id'      => $contact->id,
         ]);
 
-        $contact->update(['user_id' => $user->id]);
+        return back()->with('message', 'Conta de acesso criada com sucesso.');
+    }
 
-        return back()->with('message', 'Conta de acesso criada e associada com sucesso.');
+    /** Remove a conta de acesso desta pessoa */
+    public function unlinkUser(Contact $contact)
+    {
+        $user = $contact->user;
+        if (!$user) return back()->withErrors(['error' => 'Sem conta de acesso.']);
+
+        $user->delete();
+        return back()->with('message', 'Conta de acesso removida.');
+    }
+
+    /** Actualiza role/is_active/password do user desta pessoa */
+    public function updateUserAccount(Request $request, Contact $contact)
+    {
+        $user = $contact->user;
+        if (!$user) return back()->withErrors(['error' => 'Sem conta de acesso.']);
+
+        $data = $request->validate([
+            'role'      => 'required|in:admin,executivo,administrativo,operacional',
+            'is_active' => 'boolean',
+            'password'  => 'nullable|min:8',
+        ]);
+
+        $user->update([
+            'role'      => $data['role'],
+            'is_active' => $data['is_active'] ?? $user->is_active,
+            ...(!empty($data['password']) ? ['password' => Hash::make($data['password'])] : []),
+        ]);
+
+        return back()->with('message', 'Acesso atualizado.');
     }
 
     public function update(Request $request, Contact $contact)
@@ -206,3 +207,4 @@ class PersonController extends Controller
         return redirect('/pessoas')->with('message', 'Pessoa eliminada.');
     }
 }
+                                                                                         

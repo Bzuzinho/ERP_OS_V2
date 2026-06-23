@@ -24,11 +24,16 @@ class Contact extends Model
     ];
 
     public function organization() { return $this->belongsTo(Organization::class); }
-    public function user()         { return $this->belongsTo(User::class); }
+    // Conta de acesso: User que tem este contact_id
+    public function user()         { return $this->hasOne(User::class, 'contact_id'); }
+    // Compat legado (contacts.user_id ainda existe durante transição)
+    public function userLegacy()   { return $this->belongsTo(User::class, 'user_id'); }
     public function personType()   { return $this->belongsTo(PersonType::class); }
     public function department()   { return $this->belongsTo(Department::class); }
     public function tickets()      { return $this->hasMany(Ticket::class); }
     public function reservations() { return $this->hasMany(SpaceReservation::class); }
+    // Ficha de funcionário ligada a este contact
+    public function employee()     { return $this->hasOne(Employee::class, 'contact_id'); }
 
     public function isEmployee(): bool
     {
@@ -45,15 +50,4 @@ class Contact extends Model
         return $this->personType?->color ?? '#6b7280';
     }
 
-    public function getAvatarUrlAttribute(): ?string
-    {
-        return $this->avatar ? asset('storage/' . $this->avatar) : null;
-    }
-
-    public function getInitialsAttribute(): string
-    {
-        $parts = explode(' ', trim($this->name));
-        if (count($parts) >= 2) return strtoupper($parts[0][0] . $parts[count($parts)-1][0]);
-        return strtoupper(substr($this->name, 0, 2));
-    }
-}
+    public function getAvatarUrlAt
