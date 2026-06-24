@@ -3,9 +3,11 @@
 namespace App\Http\Middleware;
 
 use App\Models\ConversationParticipant;
+use App\Models\EmployeeAbsence;
 use App\Models\NotificationRecipient;
 use App\Models\Organization;
 use App\Models\RolePermission;
+use App\Services\PermissionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -69,6 +71,24 @@ class HandleInertiaRequests extends Middleware
                     ->whereNull('read_at')
                     ->count()
                 : 0,
+
+            // Aprovações pendentes de registos RH — visíveis para quem tem permissão
+            'pendingApprovals' => fn () => ($user && PermissionService::check($user, 'hr.ausencia.aprovar'))
+                ? EmployeeAbsence::with(['contact:id,name'])
+                    ->where('status', 'pendente')
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(fn ($a) => [
+                        'id'         => $a->id,
+                        'contact_id' => $a->contact_id,
+                        'person'     => $a->contact?->name,
+                        'type'       => $a->type,
+                        'start_date' => $a->start_date?->format('d/m/Y'),
+                        'end_date'   => $a->end_date?->format('d/m/Y'),
+                        'days'       => $a->days,
+                        'notes'      => $a->notes,
+                    ])
+                : [],
 
             'unreadMessages' => fn () => $user
                 ? ConversationParticipant::where('user_id', $user->id)

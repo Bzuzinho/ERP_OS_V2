@@ -34,6 +34,8 @@ class Contact extends Model
     public function reservations() { return $this->hasMany(SpaceReservation::class); }
     // Ficha de funcionário ligada a este contact
     public function employee()     { return $this->hasOne(Employee::class, 'contact_id'); }
+    // Registos RH (ausências, férias, licenças)
+    public function absences()     { return $this->hasMany(EmployeeAbsence::class); }
 
     public function isEmployee(): bool
     {
@@ -50,4 +52,15 @@ class Contact extends Model
         return $this->personType?->color ?? '#6b7280';
     }
 
-    public function getAvatarUrlAt
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar ? asset('storage/' . $this->avatar) : null;
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        $parts = explode(' ', trim($this->name));
+        if (count($parts) >= 2) return strtoupper($parts[0][0] . $parts[count($parts)-1][0]);
+        return strtoupper(substr($this->name, 0, 2));
+    }
+}

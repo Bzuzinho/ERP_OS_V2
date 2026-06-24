@@ -1,10 +1,10 @@
 import React, { ReactNode, useEffect, useRef } from 'react'
-import { Link, usePage } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
 import {
   LayoutDashboard, FileText, CheckSquare, CalendarDays,
   Users, Users2, Package, BookOpen, BarChart3, Settings,
   Bell, LogOut, Menu, X, ChevronLeft, ChevronRight, ClipboardList, MessageCircle,
-  ChevronDown, CheckCircle, AlertCircle, User, Plus,
+  ChevronDown, CheckCircle, AlertCircle, User, Plus, Check, XCircle, Clock,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -29,7 +29,7 @@ const NAV: NavItem[] = [
   { label: 'Documentos',    href: '/documentos',  icon: BookOpen,        group: ['/documentos', '/atas'] },
   { label: 'Chat',          href: '/chat',        icon: MessageCircle,   group: ['/chat'] },
   { label: 'Relatórios',    href: '/relatorios',  icon: BarChart3,       group: ['/relatorios'] },
-  { label: 'Configurações', href: '/configuracoes', icon: Settings,      group: ['/configuracoes', '/perfil', '/configuracoes/utilizadores', '/configuracoes/perfis'] },
+  { label: 'Configurações', href: '/configuracoes', icon: Settings,      group: ['/configuracoes', '/perfil', '/configuracoes/utilizadores', '/configuracoes/perfis', '/configuracoes/permissoes'] },
 ]
 
 const DIVIDERS_BEFORE = new Set(['Pedidos','Diretório','Relatórios','Configurações','Planeamento','Equipas','Chat'])
@@ -58,9 +58,10 @@ export const SUB_NAV: Record<string, { label: string; href: string }[]> = {
   '/planeamento/agenda':      [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
   '/planeamento/requisicoes': [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
 
-  '/configuracoes':              [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
-  '/configuracoes/perfis':       [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
-  '/configuracoes/tipos-pessoa': [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }],
+  '/configuracoes':               [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
+  '/configuracoes/perfis':        [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
+  '/configuracoes/permissoes':    [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
+  '/configuracoes/tipos-pessoa':  [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
 }
 
 export function SubNav() {
@@ -113,7 +114,9 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   const [collapsed, setCollapsed]   = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenu, setUserMenu]     = useState(false)
+  const [bellOpen, setBellOpen]     = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
+  const bellRef     = useRef<HTMLDivElement>(null)
   const { url, props } = usePage()
   const pathname = url.split('?')[0]
   const authUser = (props as any).auth?.user
@@ -122,13 +125,14 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   const unreadMessages = (props as any).unreadMessages ?? 0
   const org = (props as any).organization
   const flash = (props as any).flash as { message?: string; error?: string } | undefined
+  const pendingApprovals: any[] = (props as any).pendingApprovals ?? []
+  const totalBell = unread + pendingApprovals.length
 
-  // Fechar user menu ao clicar fora
+  // Fechar menus ao clicar fora
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenu(false)
-      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setUserMenu(false)
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -140,8 +144,9 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
     const second = pathname.split('/').filter(Boolean)[1]
     const SUB_NAV: Record<string, { label: string; href: string }[]> = {
       '/configuracoes': [
-        { label: 'Geral',   href: '/configuracoes' },
-        { label: 'Perfis',  href: '/configuracoes/perfis' },
+        { label: 'Geral',        href: '/configuracoes' },
+        { label: 'Perfis',       href: '/configuracoes/perfis' },
+        { label: 'Permissões',   href: '/configuracoes/permissoes' },
       ],
       '/planeamento': [
         { label: 'Planos',     href: '/planeamento' },
@@ -345,14 +350,101 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
             {title && <h1 className="text-[15px] font-semibold" style={{ color: 'var(--heading-color)' }}>{title}</h1>}
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/notificacoes" className="relative p-2 rounded-lg hover:bg-black/5 transition-colors">
-              <Bell size={19} className="text-gray-600"/>
-              {unread > 0 && (
-                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                  {unread}
-                </span>
+            {/* Sino ─ dropdown de notificações e aprovações */}
+            <div className="relative" ref={bellRef}>
+              <button
+                onClick={() => setBellOpen(o => !o)}
+                className="relative p-2 rounded-lg hover:bg-black/5 transition-colors">
+                <Bell size={19} className="text-gray-600"/>
+                {totalBell > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {totalBell}
+                  </span>
+                )}
+              </button>
+
+              {bellOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <h3 className="text-sm font-semibold text-gray-800">Notificações</h3>
+                    {totalBell > 0 && (
+                      <span className="text-xs text-gray-400">{totalBell} pendente{totalBell !== 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+
+                  <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50">
+                    {/* Aprovações de RH pendentes */}
+                    {pendingApprovals.length > 0 && (
+                      <div>
+                        <div className="px-4 py-2 bg-amber-50">
+                          <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
+                            <Clock size={11}/> Aprovações pendentes de RH
+                          </p>
+                        </div>
+                        {pendingApprovals.map((a: any) => (
+                          <div key={a.id} className="px-4 py-3 hover:bg-gray-50 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-800 truncate">{a.person}</p>
+                                <p className="text-xs text-gray-500 capitalize">
+                                  {a.type.replace(/_/g, ' ')}
+                                  {a.days ? ` · ${a.days} dias` : ''}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  {a.start_date} → {a.end_date}
+                                </p>
+                                {a.notes && <p className="text-xs text-gray-400 italic truncate">{a.notes}</p>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => { router.patch(`/ausencias/${a.id}/aprovar`, {}, { preserveScroll: true }); setBellOpen(false) }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
+                                <Check size={12}/> Aprovar
+                              </button>
+                              <button
+                                onClick={() => { router.patch(`/ausencias/${a.id}/rejeitar`, {}, { preserveScroll: true }); setBellOpen(false) }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">
+                                <XCircle size={12}/> Rejeitar
+                              </button>
+                              <Link
+                                href={`/pessoas/${a.contact_id}`}
+                                onClick={() => setBellOpen(false)}
+                                className="px-2 py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
+                                Ver
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Notificações gerais */}
+                    {unread > 0 && (
+                      <div>
+                        <div className="px-4 py-2 bg-gray-50">
+                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                            Outras notificações ({unread})
+                          </p>
+                        </div>
+                        <div className="px-4 py-3">
+                          <Link href="/notificacoes" onClick={() => setBellOpen(false)}
+                            className="text-sm text-primary-600 hover:underline">
+                            Ver todas as notificações →
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+
+                    {totalBell === 0 && (
+                      <div className="px-4 py-8 text-center text-sm text-gray-400">
+                        Sem notificações pendentes.
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
-            </Link>
+            </div>
 
             {/* User menu */}
             <div className="relative" ref={userMenuRef}>

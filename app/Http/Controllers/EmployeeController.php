@@ -113,4 +113,14 @@ class EmployeeController extends Controller
     public function storeAbsence(Request $request, Employee $employee)
     {
         $data = $request->validate([
-            'type'      =>
+            'type'      => 'required|in:ferias,doenca,formacao,outro',
+            'starts_at' => 'required|date',
+            'ends_at'   => 'required|date|after_or_equal:starts_at',
+            'notes'     => 'nullable|string',
+        ]);
+        $data['employee_id']     = $employee->id;
+        $data['organization_id'] = 1;
+        Absence::create($data);
+        return back()->with('message', 'Ausencia registada.');
+    }
+}

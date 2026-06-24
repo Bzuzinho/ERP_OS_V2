@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PersonTypeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
@@ -97,6 +98,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/pessoas/{contact}/criar-conta',                   [PersonController::class, 'createUserAccount'])->name('pessoas.criar-conta');
     Route::patch('/pessoas/{contact}/acesso',                       [PersonController::class, 'updateUserAccount'])->name('pessoas.update-acesso');
     Route::delete('/pessoas/{contact}/remover-conta',               [PersonController::class, 'unlinkUser'])->name('pessoas.remover-conta');
+    // Registos RH (ausências, férias, licenças)
+    Route::post('/pessoas/{contact}/ausencias',                     [PersonController::class, 'storeAbsence'])->name('pessoas.ausencias.store');
+    Route::patch('/pessoas/{contact}/ausencias/{absence}',          [PersonController::class, 'updateAbsence'])->name('pessoas.ausencias.update');
+    Route::delete('/pessoas/{contact}/ausencias/{absence}',         [PersonController::class, 'destroyAbsence'])->name('pessoas.ausencias.destroy');
+    // Aprovação rápida (via sino) — admin e executivo
+    Route::patch('/ausencias/{absence}/aprovar',                    [PersonController::class, 'approveAbsence'])->name('ausencias.aprovar');
+    Route::patch('/ausencias/{absence}/rejeitar',                   [PersonController::class, 'rejectAbsence'])->name('ausencias.rejeitar');
 
     // Entidades (organizações: fornecedores, instituições, parceiros, etc.)
     Route::get('/entidades',                                        [EntityController::class, 'index'])->name('entidades.index');
@@ -223,9 +231,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/configuracoes',                                    [SettingsController::class, 'index'])->name('settings.index');
     Route::get('/configuracoes/utilizadores',                       [SettingsController::class, 'utilizadores'])->name('settings.utilizadores');
     Route::get('/configuracoes/perfis',                             [SettingsController::class, 'perfis'])->name('settings.perfis');
+    Route::get('/configuracoes/permissoes',                         [SettingsController::class, 'permissoes'])->name('settings.permissoes');
     Route::post('/configuracoes/instituicao',                       [SettingsController::class, 'updateInstitution'])->name('settings.institution.update');
     Route::delete('/configuracoes/instituicao/logo',                [SettingsController::class, 'removeLogo'])->name('settings.institution.logo.remove');
     Route::post('/configuracoes/permissoes',                        [SettingsController::class, 'updatePermissions'])->name('settings.permissions.update');
+    // Gestão de perfis (roles)
+    Route::post('/configuracoes/perfis/criar',                      [PermissionController::class, 'storeRole'])->name('roles.store');
+    Route::patch('/configuracoes/perfis/{role}',                    [PermissionController::class, 'updateRole'])->name('roles.update');
+    Route::delete('/configuracoes/perfis/{role}',                   [PermissionController::class, 'destroyRole'])->name('roles.destroy');
+    // Acções (nível mínimo)
+    Route::patch('/configuracoes/acoes/{action}',                   [PermissionController::class, 'updateAction'])->name('permission-actions.update');
+    // Delegações ad-hoc
+    Route::post('/configuracoes/delegacoes',                        [PermissionController::class, 'storeGrant'])->name('grants.store');
+    Route::patch('/configuracoes/delegacoes/{grant}',               [PermissionController::class, 'updateGrant'])->name('grants.update');
+    Route::delete('/configuracoes/delegacoes/{grant}',              [PermissionController::class, 'destroyGrant'])->name('grants.destroy');
     Route::post('/configuracoes/usuarios',                          [SettingsController::class, 'storeUser'])->name('settings.users.store');
     Route::patch('/configuracoes/usuarios/{user}',                  [SettingsController::class, 'updateUser'])->name('settings.users.update');
     Route::delete('/configuracoes/usuarios/{user}',                 [SettingsController::class, 'destroyUser'])->name('settings.users.destroy');
@@ -251,4 +270,4 @@ Route::middleware('auth')->group(function () {
 
 });
 
-Route::fallback(fn() => Inertia::r
+Route::fallback(fn() => Inertia::render('404'));

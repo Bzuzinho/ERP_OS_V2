@@ -50,4 +50,7 @@ class User extends Authenticatable
     public function unreadMessagesCount(): int
     {
         return Conversation::whereHas('participants', fn($q) => $q->where('user_id', $this->id))
-   
+            ->get()
+            ->sum(fn($c) => $c->load(['participantRecords', 'messages'])->unreadCount($this->id));
+    }
+}

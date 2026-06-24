@@ -36,4 +36,13 @@ class Employee extends Model
 
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar ? asset('storage/' . $this->avata
+        return $this->avatar ? asset('storage/' . $this->avatar) : null;
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        $parts = explode(' ', trim($this->name));
+        if (count($parts) >= 2) return strtoupper($parts[0][0] . $parts[count($parts)-1][0]);
+        return strtoupper(substr($this->name, 0, 2));
+    }
+}

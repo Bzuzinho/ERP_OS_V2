@@ -124,6 +124,9 @@ export default function PessoasIndex({ contacts, personTypes, departments, filte
                   </div>
 
                   <div className="flex items-center gap-3 flex-shrink-0">
+                    {!c.is_active && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium hidden sm:inline">Inativo</span>
+                    )}
                     {c.person_type && (
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium hidden sm:inline"
                         style={{ backgroundColor: c.person_type.color + '22', color: c.person_type.color }}>

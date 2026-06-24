@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Department;
 use App\Models\Organization;
+use App\Models\PermissionAction;
+use App\Models\PermissionGrant;
+use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -27,6 +31,26 @@ class SettingsController extends Controller
     public function perfis()
     {
         return Inertia::render('Settings/Index', array_merge($this->sharedData(), ['section' => 'perfis']));
+    }
+
+    public function permissoes()
+    {
+        return Inertia::render('Settings/Permissions', $this->permissaoData());
+    }
+
+    private function permissaoData(): array
+    {
+        return [
+            'permRoles'   => Role::where('organization_id', 1)->orderByDesc('level')->get(),
+            'permActions' => PermissionAction::where('organization_id', 1)->orderBy('module')->orderBy('label')->get(),
+            'permGrants'  => PermissionGrant::with(['user:id,name,role', 'grantedBy:id,name'])
+                ->where('organization_id', 1)
+                ->where('is_active', true)
+                ->orderBy('created_at', 'desc')
+                ->get(),
+            'allUsers'    => User::where('organization_id', 1)->orderBy('name')->get(['id', 'name', 'role']),
+            'departments' => Department::where('organization_id', 1)->orderBy('name')->get(['id', 'name']),
+        ];
     }
 
     private function sharedData(): array
