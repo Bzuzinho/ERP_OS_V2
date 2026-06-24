@@ -30,7 +30,7 @@ interface Conv {
   id: number; type: 'direct' | 'group'; name: string; avatar_color: string;
   participants: Participant[]; others: Participant[];
   latest_message?: { body: string; type: string; user_name: string; created_at: string } | null;
-  unread_count: number; last_message_at: string | null;
+  unread_count: number; last_message_at: string | null; is_observer?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -865,6 +865,10 @@ export default function ChatIndex({
                       className="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-colors">
                       <StopCircle size={18}/>
                     </button>
+                  </div>
+                ) : active?.is_observer ? (
+                  <div className="flex items-center justify-center gap-2 py-3 text-xs text-gray-400 bg-gray-50 rounded-2xl border border-gray-200">
+                    <span>👁 Modo leitura — estás a observar esta conversa como administrador</span>
                   </div>
                 ) : (
                   <form onSubmit={sendMessage} className="flex items-end gap-2">
