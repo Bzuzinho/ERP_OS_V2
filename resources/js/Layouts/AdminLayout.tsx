@@ -145,7 +145,6 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
     const SUB_NAV: Record<string, { label: string; href: string }[]> = {
       '/configuracoes': [
         { label: 'Geral',        href: '/configuracoes' },
-        { label: 'Perfis',       href: '/configuracoes/perfis' },
         { label: 'Permissões',   href: '/configuracoes/permissoes' },
       ],
       '/planeamento': [
