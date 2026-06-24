@@ -29,7 +29,7 @@ const NAV: NavItem[] = [
   { label: 'Documentos',    href: '/documentos',  icon: BookOpen,        group: ['/documentos', '/atas'] },
   { label: 'Chat',          href: '/chat',        icon: MessageCircle,   group: ['/chat'] },
   { label: 'Relatórios',    href: '/relatorios',  icon: BarChart3,       group: ['/relatorios'] },
-  { label: 'Configurações', href: '/configuracoes', icon: Settings,      group: ['/configuracoes', '/perfil', '/configuracoes/utilizadores', '/configuracoes/perfis', '/configuracoes/permissoes'] },
+  { label: 'Configurações', href: '/configuracoes', icon: Settings,      group: ['/configuracoes', '/perfil', '/configuracoes/utilizadores', '/configuracoes/permissoes'] },
 ]
 
 const DIVIDERS_BEFORE = new Set(['Pedidos','Diretório','Relatórios','Configurações','Planeamento','Equipas','Chat'])
@@ -58,10 +58,10 @@ export const SUB_NAV: Record<string, { label: string; href: string }[]> = {
   '/planeamento/agenda':      [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
   '/planeamento/requisicoes': [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
 
-  '/configuracoes':               [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
-  '/configuracoes/perfis':        [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
-  '/configuracoes/permissoes':    [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
-  '/configuracoes/tipos-pessoa':  [{ label:'Geral', href:'/configuracoes' }, { label:'Perfis & Acessos', href:'/configuracoes/perfis' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
+  '/configuracoes':               [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
+  '/configuracoes/perfis':        [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
+  '/configuracoes/permissoes':    [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
+  '/configuracoes/tipos-pessoa':  [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
 }
 
 export function SubNav() {

@@ -532,7 +532,7 @@ export default function SettingsIndex({
     <>
       <Head title="Configuracoes"/>
       <AdminLayout title="Configuracoes">
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
           {section === 'geral'  && <GeralSection org={institution}/>}
           {section === 'perfis' && (
             <PerfisSection

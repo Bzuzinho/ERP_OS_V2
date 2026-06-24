@@ -30,7 +30,8 @@ class SettingsController extends Controller
 
     public function perfis()
     {
-        return Inertia::render('Settings/Index', array_merge($this->sharedData(), ['section' => 'perfis']));
+        // Perfis foram fundidos em Permissões — redireciona
+        return redirect('/configuracoes/permissoes');
     }
 
     public function permissoes()
@@ -41,15 +42,18 @@ class SettingsController extends Controller
     private function permissaoData(): array
     {
         return [
-            'permRoles'   => Role::where('organization_id', 1)->orderByDesc('level')->get(),
-            'permActions' => PermissionAction::where('organization_id', 1)->orderBy('module')->orderBy('label')->get(),
-            'permGrants'  => PermissionGrant::with(['user:id,name,role', 'grantedBy:id,name'])
+            'permRoles'       => Role::where('organization_id', 1)->orderByDesc('level')->get(),
+            'permActions'     => PermissionAction::where('organization_id', 1)->orderBy('module')->orderBy('label')->get(),
+            'permGrants'      => PermissionGrant::with(['user:id,name,role', 'grantedBy:id,name'])
                 ->where('organization_id', 1)
                 ->where('is_active', true)
                 ->orderBy('created_at', 'desc')
                 ->get(),
-            'allUsers'    => User::where('organization_id', 1)->orderBy('name')->get(['id', 'name', 'role']),
-            'departments' => Department::where('organization_id', 1)->orderBy('name')->get(['id', 'name']),
+            'allUsers'        => User::where('organization_id', 1)->orderBy('name')->get(['id', 'name', 'role']),
+            'departments'     => Department::where('organization_id', 1)->orderBy('name')->get(['id', 'name']),
+            // Matriz V/E/D por módulo (sistema antigo — agora integrado nos cards de perfil)
+            'rolePermissions' => RolePermission::matrix(1),
+            'modules'         => RolePermission::modules(),
         ];
     }
 

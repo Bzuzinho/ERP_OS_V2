@@ -42,7 +42,7 @@ function StatCard({ label, value, sub, icon: Icon, color, href }: any) {
         <p className={clsx('text-3xl font-bold', color)}>{value}</p>
         {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
       </div>
-      <div className={clsx('p-2.5 rounded-lg', color?.replace('text-','bg-')?.replace('-700','-100') ?? 'bg-gray-100')}>
+      <div className={clsx('p-2.5 rounded-lg', color?.replace('text-','bg-')?.replace(/-\d{3}$/, '-100') ?? 'bg-gray-100')}>
         <Icon size={22} className={color ?? 'text-gray-500'} />
       </div>
     </div>

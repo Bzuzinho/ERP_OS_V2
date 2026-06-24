@@ -45,16 +45,26 @@ class RolePermission extends Model
     }
 
     /**
-     * Perfis configuráveis (admin é sempre total e não editável).
+     * Perfis configuráveis — todos excepto admin.
+     * Usa a tabela roles dinamicamente; fallback para slugs fixos.
      */
     public static function configurableRoles(): array
     {
-        return ['executivo', 'administrativo', 'operacional'];
+        try {
+            $slugs = Role::where('organization_id', 1)
+                ->where('slug', '!=', 'admin')
+                ->orderByDesc('level')
+                ->pluck('slug')
+                ->toArray();
+
+            return $slugs ?: ['executivo', 'administrativo', 'operacional'];
+        } catch (\Exception $e) {
+            return ['executivo', 'administrativo', 'operacional'];
+        }
     }
 
     /**
-     * Carrega a matriz completa de permissões para a organização,
-     * preenchendo valores por omissão onde não existem registos.
+     * Matriz completa de permissões por perfil e módulo.
      */
     public static function matrix(int $orgId = 1): array
     {
@@ -72,10 +82,11 @@ class RolePermission extends Model
             foreach (array_keys(self::modules()) as $module) {
                 $key = "{$role}:{$module}";
                 $row = $rows[$key] ?? null;
+                $def = $defaults[$role] ?? ['can_view' => true, 'can_edit' => false, 'can_delete' => false];
                 $matrix[$role][$module] = [
-                    'can_view'   => $row ? $row->can_view   : ($defaults[$role]['can_view']   ?? true),
-                    'can_edit'   => $row ? $row->can_edit   : ($defaults[$role]['can_edit']   ?? false),
-                    'can_delete' => $row ? $row->can_delete : ($defaults[$role]['can_delete'] ?? false),
+                    'can_view'   => $row ? (bool) $row->can_view   : $def['can_view'],
+                    'can_edit'   => $row ? (bool) $row->can_edit   : $def['can_edit'],
+                    'can_delete' => $row ? (bool) $row->can_delete : $def['can_delete'],
                 ];
             }
         }

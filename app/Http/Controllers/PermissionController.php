@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\PermissionAction;
 use App\Models\PermissionGrant;
 use App\Models\Role;
+use App\Models\RolePermission;
 use App\Models\User;
 use App\Services\PermissionService;
 use Illuminate\Http\Request;
@@ -48,16 +49,39 @@ class PermissionController extends Controller
     public function updateRole(Request $request, Role $role)
     {
         $this->adminOnly();
-        abort_if($role->is_system && $request->has('level') && $role->slug === 'admin', 403,
+        abort_if($role->slug === 'admin' && $request->input('level') != 100, 403,
             'O perfil Admin não pode ter o nível alterado.');
 
         $data = $request->validate([
-            'name'  => 'required|string|max:60',
-            'level' => 'required|integer|min:1|max:' . ($role->slug === 'admin' ? 100 : 99),
-            'color' => 'nullable|string|max:20',
+            'name'                       => 'required|string|max:60',
+            'level'                      => 'required|integer|min:1|max:' . ($role->slug === 'admin' ? 100 : 99),
+            'color'                      => 'nullable|string|max:20',
+            'module_permissions'         => 'nullable|array',
+            'module_permissions.*.can_view'   => 'boolean',
+            'module_permissions.*.can_edit'   => 'boolean',
+            'module_permissions.*.can_delete' => 'boolean',
         ]);
 
-        $role->update($data);
+        $role->update([
+            'name'  => $data['name'],
+            'level' => $data['level'],
+            'color' => $data['color'],
+        ]);
+
+        // Guardar permissões por módulo (só para perfis não-admin)
+        if ($role->slug !== 'admin' && !empty($data['module_permissions'])) {
+            foreach ($data['module_permissions'] as $module => $perms) {
+                RolePermission::updateOrCreate(
+                    ['organization_id' => 1, 'role' => $role->slug, 'module' => $module],
+                    [
+                        'can_view'   => (bool) ($perms['can_view']   ?? true),
+                        'can_edit'   => (bool) ($perms['can_edit']   ?? false),
+                        'can_delete' => (bool) ($perms['can_delete'] ?? false),
+                    ]
+                );
+            }
+        }
+
         return back()->with('message', 'Perfil actualizado.');
     }
 
