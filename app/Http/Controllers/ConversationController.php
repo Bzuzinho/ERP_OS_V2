@@ -6,14 +6,21 @@ use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\MessageAttachment;
+use App\Models\NotificationRecipient;
+use App\Models\PushSubscription;
+use App\Models\SystemNotification;
 use App\Models\Task;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Minishlink\WebPush\Subscription;
+use Minishlink\WebPush\WebPush;
 
 class ConversationController extends Controller
 {
@@ -279,7 +286,108 @@ class ConversationController extends Controller
 
         $message->load(['user', 'attachments', 'parent.user']);
 
+        // ── Notificar outros participantes ────────────────────────────────────
+        $otherUsers = $conversation->participants()
+            ->where('users.id', '!=', $userId)
+            ->get(['users.id', 'users.name']);
+
+        if ($otherUsers->isNotEmpty()) {
+            // 1. Sino — criar system_notification + recipients
+            $convName = $conversation->type === 'group'
+                ? ($conversation->name ?? 'Grupo')
+                : $user->name;
+            $preview = Str::limit($message->body ?? '📎 Anexo', 80);
+
+            $notification = SystemNotification::create([
+                'organization_id' => 1,
+                'type'            => 'chat',
+                'title'           => $convName,
+                'message'         => ($conversation->type === 'group' ? $user->name . ': ' : '') . $preview,
+                'notifiable_type' => Conversation::class,
+                'notifiable_id'   => $conversation->id,
+                'action_url'      => '/chat/' . $conversation->id,
+                'priority'        => 'normal',
+            ]);
+
+            foreach ($otherUsers as $recipient) {
+                NotificationRecipient::create([
+                    'system_notification_id' => $notification->id,
+                    'user_id'                => $recipient->id,
+                ]);
+            }
+
+            // 2. Web Push — só se VAPID estiver configurado
+            $vapidPublicKey  = config('vapid.public_key');
+            $vapidPrivateKey = config('vapid.private_key');
+
+            if ($vapidPublicKey && $vapidPrivateKey) {
+                try {
+                    $webPush = new WebPush([
+                        'VAPID' => [
+                            'subject'    => config('vapid.subject'),
+                            'publicKey'  => $vapidPublicKey,
+                            'privateKey' => $vapidPrivateKey,
+                        ],
+                    ]);
+
+                    $payload = json_encode([
+                        'title' => $convName,
+                        'body'  => ($conversation->type === 'group' ? $user->name . ': ' : '') . $preview,
+                        'url'   => '/chat/' . $conversation->id,
+                        'tag'   => 'chat-' . $conversation->id,
+                    ]);
+
+                    $recipientIds = $otherUsers->pluck('id');
+                    $subscriptions = PushSubscription::whereIn('user_id', $recipientIds)->get();
+
+                    foreach ($subscriptions as $sub) {
+                        $webPush->queueNotification(
+                            Subscription::create([
+                                'endpoint'        => $sub->endpoint,
+                                'keys'            => [
+                                    'p256dh' => $sub->p256dh_key,
+                                    'auth'   => $sub->auth_key,
+                                ],
+                            ]),
+                            $payload
+                        );
+                    }
+
+                    foreach ($webPush->flush() as $report) {
+                        if ($report->isSubscriptionExpired()) {
+                            PushSubscription::where('endpoint', $report->getRequest()->getUri()->__toString())->delete();
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Web Push failed: ' . $e->getMessage());
+                }
+            }
+        }
+
         return response()->json($message);
+    }
+
+    // ── Contagem global de não lidas (para polling do badge) ──────────────────
+    public function globalUnread()
+    {
+        $user = Auth::user();
+        $count = \App\Models\ConversationParticipant::where('user_id', $user->id)
+            ->with(['conversation.messages' => function ($q) use ($user) {
+                $q->where('user_id', '!=', $user->id)->whereNull('deleted_at');
+            }])
+            ->get()
+            ->sum(function ($cp) {
+                return $cp->conversation
+                    ? $cp->conversation->messages
+                        ->filter(fn ($m) =>
+                            !$cp->last_read_at ||
+                            \Carbon\Carbon::parse($m->created_at)->gt($cp->last_read_at)
+                        )
+                        ->count()
+                    : 0;
+            });
+
+        return response()->json(['unread' => $count]);
     }
 
     // ── Buscar novas mensagens (polling) ──────────────────────────────────────

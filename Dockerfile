@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     icu-dev \
     oniguruma-dev \
     libxml2-dev \
+    gmp-dev \
     nodejs \
     npm \
     unzip \
@@ -29,7 +30,8 @@ RUN docker-php-ext-configure gd \
         intl \
         bcmath \
         mbstring \
-        xml
+        xml \
+        gmp
 
 # Composer oficial
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

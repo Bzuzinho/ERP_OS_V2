@@ -115,6 +115,8 @@ class HandleInertiaRequests extends Middleware
                     ])
                 : [],
 
+            'vapidPublicKey' => config('vapid.public_key', ''),
+
             'unreadMessages' => fn () => $user
                 ? ConversationParticipant::where('user_id', $user->id)
                     ->with(['conversation.messages' => function ($q) use ($user) {

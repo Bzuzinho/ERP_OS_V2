@@ -213,6 +213,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/{conversation}/mensagens/{message}/tarefa',             [ConversationController::class, 'messageToTask'])->name('chat.messages.task');
     Route::post('/chat/{conversation}/mensagens/{message}/pedido',             [ConversationController::class, 'messageToTicket'])->name('chat.messages.ticket');
     Route::post('/chat/push/subscribe',                                        [ConversationController::class, 'subscribePush'])->name('chat.push.subscribe');
+    Route::get('/chat/global/unread',                                          [ConversationController::class, 'globalUnread'])->name('chat.unread');
 
     // Planeamento — sub-secções fixas (antes das rotas com {plan})
     Route::get('/planeamento/agenda',                               [OperationalPlanController::class, 'agenda'])->name('plans.agenda');

@@ -107,6 +107,14 @@ export function SubNav() {
   )
 }
 
+// ─── Helper: converter VAPID public key base64url → Uint8Array ────────────
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
+}
+
 // ─── Layout principal ──────────────────────────────────────────────────────
 interface Props { children: ReactNode; title?: string; showSubNav?: boolean }
 
@@ -130,10 +138,56 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
     : (nameParts[0]?.[0] ?? 'U').toUpperCase()
   const unread = (props as any).unreadNotifications ?? 0
   const unreadMessages = (props as any).unreadMessages ?? 0
+  const vapidPublicKey = (props as any).vapidPublicKey ?? ''
   const org = (props as any).organization
   const flash = (props as any).flash as { message?: string; error?: string } | undefined
   const pendingApprovals: any[] = (props as any).pendingApprovals ?? []
   const totalBell = unread + pendingApprovals.length
+
+  // Badge do chat dinâmico (polling a cada 15s para actualizar sem reload)
+  const [chatBadge, setChatBadge] = useState(unreadMessages)
+  useEffect(() => { setChatBadge(unreadMessages) }, [unreadMessages])
+  useEffect(() => {
+    if (!authUser) return
+    const id = window.setInterval(async () => {
+      try {
+        const res = await fetch('/chat/global/unread', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        if (res.ok) { const d = await res.json(); setChatBadge(d.unread ?? 0) }
+      } catch {}
+    }, 15000)
+    return () => clearInterval(id)
+  }, [authUser?.id])  // eslint-disable-line
+
+  // Registar subscrição push (Web Push para móvel)
+  useEffect(() => {
+    if (!authUser || !vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return
+    const subscribePush = async () => {
+      try {
+        const permission = await Notification.requestPermission()
+        if (permission !== 'granted') return
+        const reg = await navigator.serviceWorker.ready
+        let sub = await reg.pushManager.getSubscription()
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+          })
+        }
+        const key = sub.getKey('p256dh')
+        const auth = sub.getKey('auth')
+        await fetch('/chat/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': (document.querySelector('meta[name=csrf-token]') as any)?.content ?? '' },
+          body: JSON.stringify({
+            endpoint:   sub.endpoint,
+            p256dh_key: key   ? btoa(String.fromCharCode(...new Uint8Array(key)))   : '',
+            auth_key:   auth  ? btoa(String.fromCharCode(...new Uint8Array(auth)))  : '',
+          }),
+        })
+      } catch {}
+    }
+    subscribePush()
+  }, [authUser?.id, vapidPublicKey])  // eslint-disable-line
 
   // Fechar menus ao clicar fora
   useEffect(() => {
@@ -277,9 +331,9 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
               >
                 <div className="relative flex-shrink-0">
                   <Icon size={18}/>
-                  {item.label === 'Chat' && unreadMessages > 0 && (
+                  {item.label === 'Chat' && chatBadge > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
-                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                      {chatBadge > 9 ? '9+' : chatBadge}
                     </span>
                   )}
                 </div>
@@ -287,9 +341,9 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
                   <span className="flex-1 flex items-center justify-between">
                     {item.label}
 
-                    {item.label === 'Chat' && unreadMessages > 0 && (
+                    {item.label === 'Chat' && chatBadge > 0 && (
                       <span className="text-[10px] bg-red-500 text-white rounded-full px-1.5 py-0.5 font-bold">
-                        {unreadMessages}
+                        {chatBadge}
                       </span>
                     )}
                   </span>
