@@ -924,6 +924,6 @@ export default function ChatIndex({
           onClose={() => setShowNew(false)}
         />
       )}
-    </div>
+    </AdminLayout>
   )
 }

@@ -102,7 +102,9 @@ class TaskController extends Controller
             }
         });
 
-        return redirect('/tarefas')->with('message', 'Tarefa criada com sucesso.');
+        $planId = $validated['plan_id'] ?? null;
+        $redirect = $planId ? "/planeamento/{$planId}" : '/tarefas';
+        return redirect($redirect)->with('message', 'Tarefa criada com sucesso.');
     }
 
     public function show(Task $task)

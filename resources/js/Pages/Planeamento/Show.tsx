@@ -50,7 +50,7 @@ const ALLOC_STATUS_COLORS: Record<string,string> = {
 }
 
 export default function PlaneamentoShow({
-  plan, events = [], users = [], teams = [],
+  plan, events = [], users = [], teams = [], spaces = [],
   tasksPendingVal = [], spaceReservations = [],
   planTeams = [], planAllocations = [],
 }: any) {
@@ -63,6 +63,8 @@ export default function PlaneamentoShow({
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [editPlan, setEditPlan]         = useState(false)
   const [addingTask, setAddingTask]     = useState(false)
+  const [addingEvent, setAddingEvent]   = useState(false)
+  const [addingReserva, setAddingReserva] = useState(false)
 
   const planForm = useForm({
     title:       plan.title,
@@ -83,6 +85,23 @@ export default function PlaneamentoShow({
     organization_id: 1,
   })
 
+  const eventForm = useForm({
+    title:      '',
+    starts_at:  '',
+    ends_at:    '',
+    type:       'planeamento',
+    visibility: 'interno',
+    plan_id:    plan.id,
+  })
+
+  const reservaForm = useForm({
+    title:    '',
+    space_id: '',
+    starts_at:'',
+    ends_at:  '',
+    purpose:  '',
+  })
+
   function savePlan(e: React.FormEvent) {
     e.preventDefault()
     planForm.patch(`/planeamento/${plan.id}`, { onSuccess: () => setEditPlan(false) })
@@ -91,6 +110,16 @@ export default function PlaneamentoShow({
   function addTask(e: React.FormEvent) {
     e.preventDefault()
     taskForm.post('/tarefas', { preserveScroll: true, onSuccess: () => { taskForm.reset('title','priority','assigned_to','team_id','due_date'); setAddingTask(false) } })
+  }
+
+  function addEvent(e: React.FormEvent) {
+    e.preventDefault()
+    eventForm.post('/agenda', { preserveScroll: true, onSuccess: () => { eventForm.reset('title','starts_at','ends_at'); setAddingEvent(false) } })
+  }
+
+  function addReserva(e: React.FormEvent) {
+    e.preventDefault()
+    reservaForm.post('/reservas', { preserveScroll: true, onSuccess: () => { reservaForm.reset(); setAddingReserva(false) } })
   }
 
   function deletePlan() {
@@ -318,9 +347,43 @@ export default function PlaneamentoShow({
                   Eventos do plano
                   {events.length > 0 && <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">{events.length}</span>}
                 </h3>
-                <Link href="/agenda" className="text-xs text-primary-600 hover:text-primary-700">Agenda →</Link>
+                <button onClick={() => setAddingEvent(v => !v)}
+                  className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium">
+                  {addingEvent ? <X size={12}/> : <Plus size={12}/>}
+                  {addingEvent ? 'Cancelar' : 'Adicionar'}
+                </button>
               </div>
-              {events.length === 0 ? (
+              {addingEvent && (
+                <form onSubmit={addEvent} className="px-4 py-3 border-b border-gray-100 bg-gray-50 space-y-2">
+                  <input value={eventForm.data.title} onChange={e => eventForm.setData('title', e.target.value)}
+                    required placeholder="Título do evento"
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-400"/>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-0.5 block">Início</label>
+                      <input type="datetime-local" value={eventForm.data.starts_at} onChange={e => eventForm.setData('starts_at', e.target.value)}
+                        required className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-400"/>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-0.5 block">Fim</label>
+                      <input type="datetime-local" value={eventForm.data.ends_at} onChange={e => eventForm.setData('ends_at', e.target.value)}
+                        required className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-400"/>
+                    </div>
+                  </div>
+                  <select value={eventForm.data.type} onChange={e => eventForm.setData('type', e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-400">
+                    <option value="planeamento">Planeamento</option>
+                    <option value="reunião">Reunião</option>
+                    <option value="interno">Interno</option>
+                    <option value="público">Público</option>
+                  </select>
+                  <button type="submit" disabled={eventForm.processing}
+                    className="w-full text-xs bg-primary-600 text-white rounded-lg px-3 py-1.5 hover:bg-primary-700 disabled:opacity-50">
+                    Criar evento
+                  </button>
+                </form>
+              )}
+              {events.length === 0 && !addingEvent ? (
                 <p className="px-4 py-5 text-xs text-gray-400 text-center">Sem eventos associados a este plano.</p>
               ) : (
                 <div className="divide-y divide-gray-50">
@@ -350,9 +413,42 @@ export default function PlaneamentoShow({
                     </span>
                   )}
                 </h3>
-                <Link href="/planeamento/requisicoes" className="text-xs text-yellow-700 hover:text-yellow-900">Ver todas →</Link>
+                <button onClick={() => setAddingReserva(v => !v)}
+                  className="flex items-center gap-1 text-xs text-yellow-700 hover:text-yellow-900 font-medium">
+                  {addingReserva ? <X size={12}/> : <Plus size={12}/>}
+                  {addingReserva ? 'Cancelar' : 'Reservar espaço'}
+                </button>
               </div>
-              {(tasksPendingVal.length + spaceReservations.length) === 0 ? (
+              {addingReserva && (
+                <form onSubmit={addReserva} className="px-4 py-3 border-b border-yellow-100 bg-yellow-50/40 space-y-2">
+                  <input value={reservaForm.data.title} onChange={e => reservaForm.setData('title', e.target.value)}
+                    required placeholder="Título da reserva"
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-yellow-400"/>
+                  <select value={reservaForm.data.space_id} onChange={e => reservaForm.setData('space_id', e.target.value)}
+                    required className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-yellow-400">
+                    <option value="">— Selecionar espaço —</option>
+                    {spaces.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-0.5 block">Início</label>
+                      <input type="datetime-local" value={reservaForm.data.starts_at} onChange={e => reservaForm.setData('starts_at', e.target.value)}
+                        required className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-yellow-400"/>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-0.5 block">Fim</label>
+                      <input type="datetime-local" value={reservaForm.data.ends_at} onChange={e => reservaForm.setData('ends_at', e.target.value)}
+                        required className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-yellow-400"/>
+                    </div>
+                  </div>
+                  <button type="submit" disabled={reservaForm.processing}
+                    className="w-full text-xs bg-yellow-500 text-white rounded-lg px-3 py-1.5 hover:bg-yellow-600 disabled:opacity-50">
+                    Criar reserva
+                  </button>
+                  {(reservaForm.errors as any).starts_at && <p className="text-xs text-red-500">{(reservaForm.errors as any).starts_at}</p>}
+                </form>
+              )}
+              {(tasksPendingVal.length + spaceReservations.length) === 0 && !addingReserva ? (
                 <p className="px-4 py-5 text-xs text-gray-400 text-center">Sem requisições pendentes neste plano.</p>
               ) : (
                 <div className="divide-y divide-gray-50">

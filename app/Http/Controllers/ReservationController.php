@@ -62,7 +62,7 @@ class ReservationController extends Controller
         $data['user_id']         = auth()->id();
         $reservation = SpaceReservation::create($data);
 
-        return redirect()->route('reservations.index')->with('message', 'Reserva criada e aguarda aprovação.');
+        return back()->with('message', 'Reserva criada e aguarda aprovação.');
     }
 
     public function show(SpaceReservation $reservation)

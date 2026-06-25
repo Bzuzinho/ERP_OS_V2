@@ -138,6 +138,7 @@ class OperationalPlanController extends Controller
             'spaceReservations' => $spaceReservations,
             'planTeams'         => $planTeams,
             'planAllocations'   => $planAllocations,
+            'spaces'            => Space::orderBy('name')->get(['id','name']),
         ]);
     }
 
