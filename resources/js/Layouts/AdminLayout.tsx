@@ -173,36 +173,61 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
     return () => clearInterval(id)
   }, [authUser?.id])  // eslint-disable-line
 
-  // Registar subscrição push (Web Push para móvel)
+  // Estado do push: 'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'
+  const [pushState, setPushState] = useState<'unknown'|'prompt'|'granted'|'denied'|'unsupported'>('unknown')
+
+  // Verificar suporte e estado actual ao montar
   useEffect(() => {
-    if (!authUser || !vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return
-    const subscribePush = async () => {
-      try {
-        const permission = await Notification.requestPermission()
-        if (permission !== 'granted') return
-        const reg = await navigator.serviceWorker.ready
-        let sub = await reg.pushManager.getSubscription()
-        if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-          })
-        }
-        const key = sub.getKey('p256dh')
-        const auth = sub.getKey('auth')
-        await fetch('/chat/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': (document.querySelector('meta[name=csrf-token]') as any)?.content ?? '' },
-          body: JSON.stringify({
-            endpoint:   sub.endpoint,
-            p256dh_key: key   ? btoa(String.fromCharCode(...new Uint8Array(key)))   : '',
-            auth_key:   auth  ? btoa(String.fromCharCode(...new Uint8Array(auth)))  : '',
-          }),
-        })
-      } catch {}
+    if (!authUser || !vapidPublicKey) return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setPushState('unsupported'); return
     }
-    subscribePush()
+    const perm = Notification.permission
+    if (perm === 'denied') { setPushState('denied'); return }
+    // Verificar se já tem subscrição activa
+    navigator.serviceWorker.ready.then(reg =>
+      reg.pushManager.getSubscription().then(sub => {
+        setPushState(sub ? 'granted' : 'prompt')
+      })
+    ).catch(() => setPushState('prompt'))
   }, [authUser?.id, vapidPublicKey])  // eslint-disable-line
+
+  // Em browsers não-iOS, tentar subscrever automaticamente se permissão já foi dada
+  useEffect(() => {
+    if (pushState !== 'prompt' || !vapidPublicKey) return
+    // iOS exige gesto — não chamamos automaticamente
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    if (isIOS) return
+    if (Notification.permission === 'granted') doSubscribePush()
+  }, [pushState, vapidPublicKey])  // eslint-disable-line
+
+  async function doSubscribePush() {
+    if (!vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') { setPushState('denied'); return }
+      const reg = await navigator.serviceWorker.ready
+      let sub = await reg.pushManager.getSubscription()
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        })
+      }
+      const key  = sub.getKey('p256dh')
+      const auth = sub.getKey('auth')
+      await fetch('/chat/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': (document.querySelector('meta[name=csrf-token]') as any)?.content ?? '' },
+        body: JSON.stringify({
+          endpoint:   sub.endpoint,
+          p256dh_key: key  ? btoa(String.fromCharCode(...new Uint8Array(key)))  : '',
+          auth_key:   auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : '',
+        }),
+      })
+      setPushState('granted')
+    } catch { setPushState('prompt') }
+  }
 
   // Fechar menus ao clicar fora
   useEffect(() => {
@@ -425,6 +450,17 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
             {title && <h1 className="text-[15px] font-semibold" style={{ color: 'var(--heading-color)' }}>{title}</h1>}
           </div>
           <div className="flex items-center gap-2">
+            {/* Botão de activação de push — aparece só quando ainda não autorizado */}
+            {pushState === 'prompt' && vapidPublicKey && (
+              <button
+                onClick={doSubscribePush}
+                title="Ativar notificações push"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-medium transition-colors"
+              >
+                <Bell size={13}/>
+                <span className="hidden sm:inline">Ativar notificações</span>
+              </button>
+            )}
             {/* Sino ─ dropdown de notificações e aprovações */}
             <div className="relative" ref={bellRef}>
               <button
