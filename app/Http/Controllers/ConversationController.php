@@ -282,8 +282,12 @@ class ConversationController extends Controller
     // ── Buscar novas mensagens (polling) ──────────────────────────────────────
     public function poll(Request $request, Conversation $conversation)
     {
-        $userId = Auth::id();
-        abort_unless($conversation->participants()->where('user_id', $userId)->exists(), 403);
+        $user          = Auth::user();
+        $userId        = $user->id;
+        $isAdmin       = $user->role === 'admin';
+        $isParticipant = $conversation->participants()->where('user_id', $userId)->exists();
+
+        abort_unless($isParticipant || $isAdmin, 403);
 
         $since = $request->since; // timestamp ISO
 
@@ -293,14 +297,16 @@ class ConversationController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        // Marcar como lido
-        $conversation->participantRecords()
-            ->where('user_id', $userId)
-            ->update(['last_read_at' => now()]);
+        // Só marca como lido se for participante (admin observador não marca)
+        if ($isParticipant) {
+            $conversation->participantRecords()
+                ->where('user_id', $userId)
+                ->update(['last_read_at' => now()]);
+        }
 
         return response()->json([
-            'messages'   => $messages,
-            'unread'     => Auth::user()->unreadMessagesCount(),
+            'messages' => $messages,
+            'unread'   => $user->unreadMessagesCount(),
         ]);
     }
 
@@ -407,20 +413,4 @@ class ConversationController extends Controller
             'name'         => $display,
             'avatar_color' => $c->avatar_color,
             'participants' => $c->participants->map(fn($u) => [
-                'id'     => $u->id,
-                'name'   => $u->name,
-                'avatar' => $u->avatar,
-            ]),
-            'others'        => $others->map(fn($u) => ['id' => $u->id, 'name' => $u->name, 'avatar' => $u->avatar]),
-            'latest_message'=> $latest ? [
-                'body'       => $latest->deleted_at ? '🗑 Mensagem apagada' : ($latest->body ?? '📎 Anexo'),
-                'type'       => $latest->type,
-                'user_name'  => $latest->user?->name,
-                'created_at' => $latest->created_at,
-            ] : null,
-            'unread_count'   => $unread,
-            'last_message_at'=> $c->last_message_at,
-            'is_observer'    => $isAdmin && !$isParticipant,
-        ];
-    }
-}
+                'id'  
