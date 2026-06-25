@@ -178,6 +178,8 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   // Estado do push: 'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported' | 'loading'
   const [pushState, setPushState] = useState<'unknown'|'prompt'|'granted'|'denied'|'unsupported'|'loading'>('unknown')
   const [pushError, setPushError] = useState<string|null>(null)
+  const [pushDiag, setPushDiag] = useState<string[]>([])
+  const [showDiag, setShowDiag] = useState(false)
 
   // Verificar suporte e estado actual ao montar
   useEffect(() => {
@@ -209,29 +211,47 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   }, [pushState, vapidPublicKey])  // eslint-disable-line
 
   function doSubscribePush() {
-    if (!vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return
+    const log = (msg: string) => {
+      console.log('[Push]', msg)
+      setPushDiag(d => [...d.slice(-9), msg])
+    }
+
+    const isIOS2 = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    log(`start — iOS:${isIOS2} standalone:${!!(navigator as any).standalone} SW:${'serviceWorker' in navigator} PM:${'PushManager' in window} Notif:${'Notification' in window}`)
+
+    if (!vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      log('abort: falta vapid/SW/PM')
+      return
+    }
     setPushState('loading')
     setPushError(null)
 
     // Chamar requestPermission directamente (sem await) para garantir contexto de gesto no iOS
     Notification.requestPermission().then(permission => {
+      log(`permission: ${permission}`)
       if (permission !== 'granted') {
         setPushState(permission === 'denied' ? 'denied' : 'prompt')
         return
       }
 
-      navigator.serviceWorker.ready.then(reg =>
-        reg.pushManager.getSubscription().then(sub =>
-          sub ?? reg.pushManager.subscribe({
+      log('aguardar SW ready…')
+      navigator.serviceWorker.ready.then(reg => {
+        log('SW ready, getSubscription…')
+        return reg.pushManager.getSubscription().then(sub => {
+          if (sub) { log('sub existente'); return sub }
+          log('subscribe novo…')
+          return reg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
           })
-        )
-      ).then(sub => {
+        })
+      }).then(sub => {
         if (!sub) throw new Error('subscribe retornou null')
+        log(`sub ok: ${sub.endpoint.slice(0, 40)}…`)
         const key  = sub.getKey('p256dh')
         const auth = sub.getKey('auth')
         const csrf = (document.querySelector('meta[name=csrf-token]') as any)?.content ?? ''
+        log('POST /chat/push/subscribe…')
         return fetch('/chat/push/subscribe', {
           method: 'POST',
           credentials: 'same-origin',
@@ -243,17 +263,19 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
           }),
         })
       }).then(res => {
+        log(`servidor: ${res.status}`)
         if (!res.ok) throw new Error(`Servidor: ${res.status}`)
+        log('✓ subscrito com sucesso')
         setPushState('granted')
       }).catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err)
-        console.error('[Push] erro ao subscrever:', msg)
+        log(`ERRO subscribe: ${msg}`)
         setPushError(msg)
         setPushState('prompt')
       })
     }).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err)
-      console.error('[Push] requestPermission falhou:', msg)
+      log(`ERRO requestPermission: ${msg}`)
       setPushError(msg)
       setPushState('prompt')
     })
@@ -501,25 +523,44 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
             {title && <h1 className="text-[15px] font-semibold" style={{ color: 'var(--heading-color)' }}>{title}</h1>}
           </div>
           <div className="flex items-center gap-2">
-            {/* Botão de activação de push — aparece só quando ainda não autorizado */}
+            {/* Botão de activação de push + painel de diagnóstico */}
             {(pushState === 'prompt' || pushState === 'loading') && vapidPublicKey && (
-              <button
-                onClick={pushState === 'loading' ? undefined : doSubscribePush}
-                disabled={pushState === 'loading'}
-                title={pushError ? `Erro: ${pushError}` : 'Ativar notificações push'}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${
-                  pushState === 'loading'
-                    ? 'bg-indigo-100 border-indigo-200 text-indigo-400 cursor-wait'
-                    : pushError
-                    ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
-                    : 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700'
-                }`}
-              >
-                <Bell size={13}/>
-                <span className="hidden sm:inline">
-                  {pushState === 'loading' ? 'A ativar…' : pushError ? 'Tentar novamente' : 'Ativar notificações'}
-                </span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={pushState === 'loading' ? undefined : doSubscribePush}
+                  onLongPress={undefined}
+                  disabled={pushState === 'loading'}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${
+                    pushState === 'loading'
+                      ? 'bg-indigo-100 border-indigo-200 text-indigo-400 cursor-wait'
+                      : pushError
+                      ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
+                      : 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700'
+                  }`}
+                >
+                  <Bell size={13}/>
+                  <span>
+                    {pushState === 'loading' ? 'A ativar…' : pushError ? 'Tentar novamente' : 'Ativar notif.'}
+                  </span>
+                </button>
+                {/* Botão diagnóstico — toque longo ou duplo toque para ver log */}
+                <button
+                  onClick={() => setShowDiag(d => !d)}
+                  className="absolute -right-1 -top-1 w-4 h-4 rounded-full bg-gray-300 text-gray-600 text-[9px] flex items-center justify-center leading-none"
+                  title="Ver diagnóstico">?</button>
+                {showDiag && (
+                  <div className="absolute right-0 top-full mt-1 z-50 w-72 bg-gray-900 text-green-300 text-[10px] font-mono rounded-lg p-2 shadow-xl overflow-y-auto max-h-52">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-gray-400 font-bold">PUSH DIAG</span>
+                      <button onClick={() => setShowDiag(false)} className="text-gray-500 hover:text-white">✕</button>
+                    </div>
+                    <div className="text-yellow-300 mb-1">estado: {pushState}</div>
+                    {pushError && <div className="text-red-400 mb-1 break-all">erro: {pushError}</div>}
+                    {pushDiag.length === 0 && <div className="text-gray-500">Sem passos ainda. Prime "Ativar notif." primeiro.</div>}
+                    {pushDiag.map((l, i) => <div key={i} className="break-all border-b border-gray-800 pb-0.5 mb-0.5">{l}</div>)}
+                  </div>
+                )}
+              </div>
             )}
             {/* Sino ─ dropdown de notificações e aprovações */}
             <div className="relative" ref={bellRef}>
@@ -718,10 +759,6 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
           {children}
         </main>
       </div>
-    </div>
-  )
-}
-</div>
     </div>
   )
 }
