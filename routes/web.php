@@ -214,6 +214,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/{conversation}/mensagens/{message}/pedido',             [ConversationController::class, 'messageToTicket'])->name('chat.messages.ticket');
     Route::post('/chat/push/subscribe',                                        [ConversationController::class, 'subscribePush'])->name('chat.push.subscribe');
     Route::get('/chat/global/unread',                                          [ConversationController::class, 'globalUnread'])->name('chat.unread');
+    Route::get('/debug/push-status',                                           function () {
+        $user = auth()->user();
+        if (!$user) return response()->json(['error' => 'not logged in']);
+        return response()->json([
+            'user_id'   => $user->id,
+            'user_name' => $user->name,
+            'push_subs' => \App\Models\PushSubscription::where('user_id', $user->id)
+                ->get(['id', 'endpoint', 'created_at'])
+                ->map(fn($s) => ['id' => $s->id, 'endpoint' => substr($s->endpoint, 0, 50), 'created_at' => $s->created_at]),
+            'bell_unread' => \App\Models\NotificationRecipient::where('user_id', $user->id)->whereNull('read_at')->count(),
+        ]);
+    });
 
     // Planeamento — sub-secções fixas (antes das rotas com {plan})
     Route::get('/planeamento/agenda',                               [OperationalPlanController::class, 'agenda'])->name('plans.agenda');

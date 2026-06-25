@@ -337,14 +337,16 @@ class ConversationController extends Controller
                         'tag'   => 'chat-' . $conversation->id,
                     ]);
 
-                    $recipientIds = $otherUsers->pluck('id');
+                    $recipientIds  = $otherUsers->pluck('id');
                     $subscriptions = PushSubscription::whereIn('user_id', $recipientIds)->get();
+
+                    Log::info('Push: sending to ' . $subscriptions->count() . ' subscriptions for users ' . $recipientIds->implode(','));
 
                     foreach ($subscriptions as $sub) {
                         $webPush->queueNotification(
                             Subscription::create([
-                                'endpoint'        => $sub->endpoint,
-                                'keys'            => [
+                                'endpoint' => $sub->endpoint,
+                                'keys'     => [
                                     'p256dh' => $sub->p256dh_key,
                                     'auth'   => $sub->auth_key,
                                 ],
@@ -354,17 +356,52 @@ class ConversationController extends Controller
                     }
 
                     foreach ($webPush->flush() as $report) {
-                        if ($report->isSubscriptionExpired()) {
-                            PushSubscription::where('endpoint', $report->getRequest()->getUri()->__toString())->delete();
+                        $endpoint = substr((string) $report->getRequest()->getUri(), 0, 60);
+                        if ($report->isSuccess()) {
+                            Log::info("Push OK: {$endpoint}");
+                        } elseif ($report->isSubscriptionExpired()) {
+                            Log::info("Push expired, deleting: {$endpoint}");
+                            PushSubscription::where('endpoint', (string) $report->getRequest()->getUri())->delete();
+                        } else {
+                            Log::warning("Push FAILED: {$endpoint} — " . $report->getReason());
                         }
                     }
                 } catch (\Throwable $e) {
-                    Log::warning('Web Push failed: ' . $e->getMessage());
+                    Log::error('Web Push exception: ' . $e->getMessage() . ' ' . $e->getTraceAsString());
                 }
             }
         }
 
         return response()->json($message);
+    }
+
+    // ── Guardar subscrição de push do browser ────────────────────────────────
+    public function subscribePush(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) return response()->json(['error' => 'unauthenticated'], 401);
+
+        $validated = $request->validate([
+            'endpoint'   => 'required|string',
+            'p256dh_key' => 'required|string',
+            'auth_key'   => 'required|string',
+        ]);
+
+        PushSubscription::updateOrCreate(
+            ['user_id' => $user->id, 'endpoint' => $validated['endpoint']],
+            [
+                'p256dh_key' => $validated['p256dh_key'],
+                'auth_key'   => $validated['auth_key'],
+                'user_agent' => $request->header('User-Agent', ''),
+            ]
+        );
+
+        Log::info('Push subscribed', [
+            'user_id'  => $user->id,
+            'endpoint' => substr($validated['endpoint'], 0, 60),
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 
     // ── Contagem global de não lidas (para polling do badge) ──────────────────
