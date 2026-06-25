@@ -72,7 +72,10 @@ class Ticket extends Model
     public function creator()      { return $this->belongsTo(User::class, 'created_by'); }
     public function assignee()     { return $this->belongsTo(User::class, 'assigned_to'); }
     public function serviceArea()  { return $this->belongsTo(ServiceArea::class); }
+    /** @deprecated Use teams() M2M. team_id mantido para retrocompatibilidade. */
     public function team()         { return $this->belongsTo(Team::class); }
+    /** Equipas atribuídas a este pedido (M2M) */
+    public function teams()        { return $this->belongsToMany(Team::class, 'ticket_teams')->withPivot('assigned_by','assigned_at')->withTimestamps(); }
     public function project()      { return $this->belongsTo(OperationalPlan::class, 'project_id'); }
     public function comments()     { return $this->hasMany(TicketComment::class)->orderBy('created_at'); }
     public function attachments()  { return $this->morphMany(Attachment::class, 'attachable'); }

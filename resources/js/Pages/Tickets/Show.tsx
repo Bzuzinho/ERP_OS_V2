@@ -66,7 +66,12 @@ export default function TicketShow({ ticket, users, serviceAreas, teams, contact
   const isClosed = ['resolvido','encerrado','cancelado'].includes(ticket.status)
 
   const statusForm   = useForm({ status: ticket.status, note: '' })
-  const routeForm    = useForm({ service_area_id: ticket.service_area_id ?? '', assigned_to: ticket.assigned_to ?? '' })
+  const routeForm    = useForm({
+    service_area_id: ticket.service_area_id ?? '',
+    assigned_to:     ticket.assigned_to ?? '',
+    team_ids:        (ticket.teams ?? []).map((t: any) => t.id) as number[],
+  })
+  const [showTeamPicker, setShowTeamPicker] = useState(false)
   const assignForm   = useForm({ assigned_to: ticket.assigned_to ?? '' })
   const cancelForm   = useForm({ cancellation_reason: '' })
   const taskForm     = useForm({ title: `Tarefa de ${ticket.reference}`, description: ticket.title })
@@ -182,7 +187,11 @@ export default function TicketShow({ ticket, users, serviceAreas, teams, contact
                 <p><span className="font-semibold text-gray-700">Responsável:</span> <span className="text-gray-600">{ticket.assignee?.name ?? 'Não definido'}</span></p>
                 <p><span className="font-semibold text-gray-700">Tema:</span> <span className="text-gray-600">{ticket.tema || '—'}</span></p>
                 <p><span className="font-semibold text-gray-700">Departamento:</span> <span className="text-gray-600">{ticket.department || '—'}</span></p>
-                <p><span className="font-semibold text-gray-700">Equipa:</span> <span className="text-gray-600">{ticket.team?.name ?? '—'}</span></p>
+                <p><span className="font-semibold text-gray-700">Equipas:</span>{' '}
+                  <span className="text-gray-600">
+                    {(ticket.teams ?? []).length === 0 ? '—' : (ticket.teams ?? []).map((t: any) => t.name).join(', ')}
+                  </span>
+                </p>
               </div>
             </div>
 
@@ -296,17 +305,92 @@ export default function TicketShow({ ticket, users, serviceAreas, teams, contact
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
             <Card title="Encaminhamento interno" color="blue" id="encaminhar">
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3 text-xs text-blue-700 space-y-0.5">
-                <p><strong>Área funcional:</strong> {ticket.service_area?.name ?? 'Sem área funcional'}</p>
+              {/* Estado actual */}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3 text-xs text-blue-700 space-y-1">
+                <p><strong>Área funcional:</strong> {ticket.service_area?.name ?? 'Sem área'}</p>
+                <p><strong>Equipas:</strong>{' '}
+                  {(ticket.teams ?? []).length === 0
+                    ? 'Nenhuma equipa'
+                    : (ticket.teams ?? []).map((t: any) => t.name).join(', ')
+                  }
+                </p>
                 <p><strong>Responsável:</strong> {ticket.assignee?.name ?? 'Não definido'}</p>
               </div>
+
               <div className="space-y-2 mb-3">
+                {/* Área */}
                 <select value={routeForm.data.service_area_id}
-                  onChange={e => routeForm.setData('service_area_id', e.target.value)}
+                  onChange={e => {
+                    const newId   = e.target.value
+                    const area    = serviceAreas?.find((sa: any) => String(sa.id) === newId)
+                    const areaTeamIds = area?.teams?.map((t: any) => t.id) ?? []
+                    // Actualização atómica: área + equipas da área (substituindo selecção anterior)
+                    routeForm.setData((prev: any) => ({
+                      ...prev,
+                      service_area_id: newId,
+                      team_ids: areaTeamIds,
+                    }))
+                  }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-400 focus:border-transparent">
                   <option value="">Sem área funcional</option>
                   {serviceAreas?.map((sa: any) => <option key={sa.id} value={sa.id}>{sa.name}</option>)}
                 </select>
+
+                {/* Equipas */}
+                <div>
+                  <div className="flex flex-wrap gap-1.5 mb-1.5">
+                    {routeForm.data.team_ids.length === 0 && (
+                      <span className="text-xs text-gray-400 italic">Sem equipas atribuídas</span>
+                    )}
+                    {routeForm.data.team_ids.map((tid: number) => {
+                      const t = teams?.find((x: any) => x.id === tid)
+                      return t ? (
+                        <span key={tid}
+                          className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-2 py-0.5">
+                          {t.name}
+                          <button type="button"
+                            onClick={() => routeForm.setData('team_ids', routeForm.data.team_ids.filter((x: number) => x !== tid))}
+                            className="hover:text-red-500 transition-colors">×</button>
+                        </span>
+                      ) : null
+                    })}
+                    <button type="button" onClick={() => setShowTeamPicker(p => !p)}
+                      className="flex items-center gap-0.5 text-xs text-indigo-600 hover:text-indigo-800 border border-dashed border-indigo-300 rounded-full px-2 py-0.5 hover:border-indigo-500 transition-colors">
+                      + equipa
+                    </button>
+                  </div>
+                  {showTeamPicker && (
+                    <div className="border border-gray-200 rounded-lg bg-white shadow-sm max-h-36 overflow-y-auto mb-1">
+                      {(() => {
+                        const selectedArea = serviceAreas?.find((sa: any) => String(sa.id) === String(routeForm.data.service_area_id))
+                        const areaTeamIds  = selectedArea?.teams?.map((t: any) => t.id) ?? []
+                        const sorted = [...(teams ?? [])].sort((a: any, b: any) =>
+                          areaTeamIds.includes(b.id) - areaTeamIds.includes(a.id) || a.name.localeCompare(b.name)
+                        )
+                        return sorted.map((t: any) => {
+                          const checked    = routeForm.data.team_ids.includes(t.id)
+                          const inArea     = areaTeamIds.includes(t.id)
+                          return (
+                            <label key={t.id}
+                              className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm">
+                              <input type="checkbox" checked={checked}
+                                onChange={() => routeForm.setData('team_ids',
+                                  checked
+                                    ? routeForm.data.team_ids.filter((x: number) => x !== t.id)
+                                    : [...routeForm.data.team_ids, t.id]
+                                )}
+                                className="rounded text-indigo-600" />
+                              <span className={inArea ? 'font-medium text-indigo-800' : 'text-gray-700'}>{t.name}</span>
+                              {inArea && <span className="text-xs text-indigo-400">desta área</span>}
+                            </label>
+                          )
+                        })
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Responsável */}
                 <select value={routeForm.data.assigned_to}
                   onChange={e => routeForm.setData('assigned_to', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-400 focus:border-transparent">
@@ -314,6 +398,7 @@ export default function TicketShow({ ticket, users, serviceAreas, teams, contact
                   {users?.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
+
               {!ticket.service_area_id && (
                 <p className="text-xs text-red-500 mb-2">Este pedido está sem área funcional definida.</p>
               )}

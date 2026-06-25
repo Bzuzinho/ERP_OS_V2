@@ -23,6 +23,8 @@ class Contact extends Model
         'termination_date' => 'date',
     ];
 
+    protected $appends = ['avatar_url', 'initials'];
+
     public function organization() { return $this->belongsTo(Organization::class); }
     // Conta de acesso: User que tem este contact_id
     public function user()         { return $this->hasOne(User::class, 'contact_id'); }

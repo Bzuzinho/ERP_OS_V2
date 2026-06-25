@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/pedidos/{ticket}',                               [TicketController::class, 'update'])->name('tickets.update');
     Route::post('/pedidos/{ticket}/comentarios',                    [TicketController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/pedidos/{ticket}/encaminhar',                     [TicketController::class, 'route'])->name('tickets.route');
+    Route::patch('/pedidos/{ticket}/equipas',                       [TicketController::class, 'updateTeams'])->name('tickets.teams.update');
     Route::patch('/pedidos/{ticket}/atribuir',                      [TicketController::class, 'assign'])->name('tickets.assign');
     Route::post('/pedidos/{ticket}/cancelar',                       [TicketController::class, 'cancel'])->name('tickets.cancel');
     Route::post('/pedidos/{ticket}/gerar-tarefa',                   [TicketController::class, 'createTask'])->name('tickets.task.create');
@@ -65,9 +66,11 @@ Route::middleware('auth')->group(function () {
     Route::patch('/tarefas/{task}',                                 [TaskController::class, 'update'])->name('tasks.update');
     Route::delete('/tarefas/{task}',                                [TaskController::class, 'destroy'])->name('tasks.destroy');
     Route::post('/tarefas/{task}/validar',                          [TaskController::class, 'approveTask'])->name('tasks.validate');
+    Route::patch('/tarefas/{task}/atribuicao',                      [TaskController::class, 'updateAssignment'])->name('tasks.assignment.update');
     Route::post('/tarefas/{task}/materiais',                        [TaskController::class, 'addMaterial'])->name('tasks.materials.store');
     Route::post('/tarefas/{task}/checklist',                        [TaskController::class, 'storeChecklistItem'])->name('tasks.checklist.store');
     Route::patch('/tarefas/{task}/checklist/{item}/toggle',         [TaskController::class, 'toggleChecklistItem'])->name('tasks.checklist.toggle');
+    Route::post('/tarefas/{task}/checklist/{item}/validar',         [TaskController::class, 'validateChecklistItem'])->name('tasks.checklist.validate');
     Route::delete('/tarefas/{task}/checklist/{item}',               [TaskController::class, 'destroyChecklistItem'])->name('tasks.checklist.destroy');
     Route::patch('/tarefas/{task}/checklist/{item}',                [TaskController::class, 'updateChecklistItem'])->name('tasks.checklist.update');
 
@@ -94,6 +97,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/pessoas/{contact}',                                [PersonController::class, 'show'])->name('pessoas.show');
     Route::patch('/pessoas/{contact}',                              [PersonController::class, 'update'])->name('pessoas.update');
     Route::delete('/pessoas/{contact}',                             [PersonController::class, 'destroy'])->name('pessoas.destroy');
+    // Foto de perfil
+    Route::post('/pessoas/{contact}/avatar',                        [PersonController::class, 'uploadAvatar'])->name('pessoas.avatar');
     // Conta de acesso da pessoa
     Route::post('/pessoas/{contact}/criar-conta',                   [PersonController::class, 'createUserAccount'])->name('pessoas.criar-conta');
     Route::patch('/pessoas/{contact}/acesso',                       [PersonController::class, 'updateUserAccount'])->name('pessoas.update-acesso');
@@ -112,6 +117,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/entidades/{contact}',                              [EntityController::class, 'show'])->name('entidades.show');
     Route::patch('/entidades/{contact}',                            [EntityController::class, 'update'])->name('entidades.update');
     Route::delete('/entidades/{contact}',                           [EntityController::class, 'destroy'])->name('entidades.destroy');
+    Route::post('/entidades/{contact}/avatar',                      [EntityController::class, 'uploadAvatar'])->name('entidades.avatar');
 
     // Munícipes (alias legado — mantido para links existentes em Pedidos, etc.)
     Route::get('/municipes',                                        [ContactController::class, 'index'])->name('contacts.index');
@@ -232,6 +238,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/configuracoes/utilizadores',                       [SettingsController::class, 'utilizadores'])->name('settings.utilizadores');
     Route::get('/configuracoes/perfis',                             [SettingsController::class, 'perfis'])->name('settings.perfis');
     Route::get('/configuracoes/permissoes',                         [SettingsController::class, 'permissoes'])->name('settings.permissoes');
+    Route::get('/configuracoes/areas',                              [SettingsController::class, 'areas'])->name('settings.areas');
+    Route::post('/configuracoes/areas',                             [SettingsController::class, 'storeArea'])->name('settings.areas.store');
+    Route::patch('/configuracoes/areas/{area}',                     [SettingsController::class, 'updateArea'])->name('settings.areas.update');
+    Route::delete('/configuracoes/areas/{area}',                    [SettingsController::class, 'destroyArea'])->name('settings.areas.destroy');
     Route::post('/configuracoes/instituicao',                       [SettingsController::class, 'updateInstitution'])->name('settings.institution.update');
     Route::delete('/configuracoes/instituicao/logo',                [SettingsController::class, 'removeLogo'])->name('settings.institution.logo.remove');
     Route::post('/configuracoes/permissoes',                        [SettingsController::class, 'updatePermissions'])->name('settings.permissions.update');

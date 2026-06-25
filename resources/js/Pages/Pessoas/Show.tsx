@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Head, Link, router, useForm } from '@inertiajs/react'
 import AdminLayout from '@/Layouts/AdminLayout'
 import {
   ArrowLeft, Mail, Phone, Smartphone, MapPin, FileText, Edit3, Edit2,
   UserCheck, Trash2, Briefcase, Building2, Calendar, Shield,
   AlertTriangle, X, Check, Plus, LogIn, UserPlus, Unlink,
-  KeyRound, Eye, EyeOff,
+  KeyRound, Eye, EyeOff, Camera,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -65,26 +65,56 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
   const [editing, setEditing] = useState(false)
   const color = contact.person_type?.color ?? '#6b7280'
 
+  // ── Foto de perfil ──────────────────────────────────────────────────────────
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(contact.avatar_url ?? null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+    const formData = new FormData()
+    formData.append('avatar', file)
+    router.post(`/pessoas/${contact.id}/avatar`, formData, { preserveScroll: true })
+  }
+
   // ── Conta de acesso ─────────────────────────────────────────────────────────
   const [accountMode, setAccountMode] = useState<'idle' | 'create' | 'edit'>('idle')
   const [accEmail,    setAccEmail]    = useState(contact.email ?? '')
-  const [accPassword, setAccPassword] = useState('')
-  const [accRole,     setAccRole]     = useState(contact.user?.role ?? 'operacional')
-  const [accActive,   setAccActive]   = useState(contact.user?.is_active ?? true)
   const [showPwd,     setShowPwd]     = useState(false)
-  const [accountBusy, setAccountBusy] = useState(false)
+
+  const [accBusy, setAccBusy] = useState(false)
+  const accEditForm = useForm({
+    role:      contact.user?.role      ?? 'operacional',
+    is_active: contact.user?.is_active ?? true,
+    password:  '',
+  })
+
+  const accCreateForm = useForm({
+    role:     'operacional',
+    password: '',
+  })
 
   function submitCreate() {
-    setAccountBusy(true)
-    router.post(`/pessoas/${contact.id}/criar-conta`, { password: accPassword, role: accRole }, {
-      onFinish: () => { setAccountBusy(false); setAccountMode('idle'); setAccPassword('') }
+    accCreateForm.post(`/pessoas/${contact.id}/criar-conta`, {
+      onSuccess: () => { setAccountMode('idle'); accCreateForm.reset() },
     })
   }
 
-  function submitEdit() {
-    setAccountBusy(true)
-    router.patch(`/pessoas/${contact.id}/acesso`, { role: accRole, is_active: accActive, password: accPassword || undefined }, {
-      onFinish: () => { setAccountBusy(false); setAccountMode('idle'); setAccPassword('') }
+  function submitAccountEdit() {
+    const payload: Record<string, any> = {
+      role:      accEditForm.data.role,
+      is_active: accEditForm.data.is_active,
+    }
+    if (accEditForm.data.password) payload.password = accEditForm.data.password
+    setAccBusy(true)
+    router.patch(`/pessoas/${contact.id}/acesso`, payload, {
+      preserveScroll: true,
+      onSuccess: () => { setAccountMode('idle'); accEditForm.setData('password', ''); accEditForm.clearErrors() },
+      onError:   (errors) => accEditForm.setError(errors as any),
+      onFinish:  () => setAccBusy(false),
     })
   }
 
@@ -186,9 +216,22 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
             <ArrowLeft size={18} className="text-gray-600"/>
           </Link>
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
-              style={{ backgroundColor: color }}>
-              {contact.initials ?? contact.name?.[0]?.toUpperCase()}
+            <div
+              className="relative group w-12 h-12 rounded-full flex-shrink-0 cursor-pointer"
+              onClick={() => avatarInputRef.current?.click()}
+              title="Clica para alterar a foto"
+            >
+              {avatarPreview
+                ? <img src={avatarPreview} alt={contact.name} className="w-12 h-12 rounded-full object-cover"/>
+                : <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold"
+                    style={{ backgroundColor: color }}>
+                    {contact.initials ?? contact.name?.[0]?.toUpperCase()}
+                  </div>
+              }
+              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <Camera size={14} className="text-white"/>
+              </div>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange}/>
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -573,7 +616,7 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Perfil</label>
-                      <select value={accRole} onChange={e => setAccRole(e.target.value)}
+                      <select value={accEditForm.data.role} onChange={e => accEditForm.setData('role', e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white">
                         <option value="operacional">Operacional</option>
                         <option value="administrativo">Administrativo</option>
@@ -582,25 +625,29 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
-                      <input type="checkbox" id="acc-active" checked={accActive} onChange={e => setAccActive(e.target.checked)} className="rounded"/>
+                      <input type="checkbox" id="acc-active" checked={accEditForm.data.is_active} onChange={e => accEditForm.setData('is_active', e.target.checked)} className="rounded"/>
                       <label htmlFor="acc-active" className="text-xs text-gray-700">Conta ativa</label>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Nova password <span className="text-gray-400">(deixar vazio para não alterar)</span></label>
                       <div className="relative">
-                        <input type={showPwd ? 'text' : 'password'} value={accPassword} onChange={e => setAccPassword(e.target.value)}
-                          className="w-full px-3 py-2 pr-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        <input type={showPwd ? 'text' : 'password'} value={accEditForm.data.password} onChange={e => accEditForm.setData('password', e.target.value)}
+                          className={clsx('w-full px-3 py-2 pr-9 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500',
+                            accEditForm.errors.password ? 'border-red-400' : 'border-gray-300')}
                           placeholder="Nova password…"/>
                         <button type="button" onClick={() => setShowPwd(p => !p)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
                           {showPwd ? <EyeOff size={14}/> : <Eye size={14}/>}
                         </button>
                       </div>
+                      {accEditForm.errors.password && (
+                        <p className="text-xs text-red-500 mt-1">{accEditForm.errors.password}</p>
+                      )}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setAccountMode('idle')} className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">Cancelar</button>
-                      <button onClick={submitEdit} disabled={accountBusy}
+                      <button onClick={() => { setAccountMode('idle'); accEditForm.reset() }} className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">Cancelar</button>
+                      <button onClick={submitAccountEdit} disabled={accBusy}
                         className="flex-1 px-3 py-1.5 text-xs bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50">
-                        {accountBusy ? 'A guardar…' : 'Guardar'}
+                        {accBusy ? 'A guardar…' : 'Guardar'}
                       </button>
                     </div>
                     <button onClick={removeAccount} className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
@@ -627,7 +674,10 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
                         {contact.user.is_active ? 'Ativo' : 'Inativo'}
                       </span>
                     </div>
-                    <button onClick={() => { setAccRole(contact.user.role); setAccActive(contact.user.is_active); setAccountMode('edit') }}
+                    <button onClick={() => {
+                        accEditForm.setData({ role: contact.user.role, is_active: contact.user.is_active, password: '' })
+                        setAccountMode('edit')
+                      }}
                       className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors">
                       <Edit3 size={12}/> Gerir acesso
                     </button>
@@ -646,16 +696,20 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
                     <div className="relative">
-                      <input type={showPwd ? 'text' : 'password'} value={accPassword} onChange={e => setAccPassword(e.target.value)}
-                        className="w-full px-3 py-2 pr-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"/>
+                      <input type={showPwd ? 'text' : 'password'} value={accCreateForm.data.password} onChange={e => accCreateForm.setData('password', e.target.value)}
+                        className={clsx('w-full px-3 py-2 pr-9 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500',
+                          accCreateForm.errors.password ? 'border-red-400' : 'border-gray-300')}/>
                       <button type="button" onClick={() => setShowPwd(p => !p)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
                         {showPwd ? <EyeOff size={14}/> : <Eye size={14}/>}
                       </button>
                     </div>
+                    {accCreateForm.errors.password && (
+                      <p className="text-xs text-red-500 mt-1">{accCreateForm.errors.password}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Perfil</label>
-                    <select value={accRole} onChange={e => setAccRole(e.target.value)}
+                    <select value={accCreateForm.data.role} onChange={e => accCreateForm.setData('role', e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white">
                       <option value="operacional">Operacional</option>
                       <option value="administrativo">Administrativo</option>
@@ -664,10 +718,10 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setAccountMode('idle')} className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">Cancelar</button>
-                    <button onClick={submitCreate} disabled={!contact.email || !accPassword || accountBusy}
+                    <button onClick={() => { setAccountMode('idle'); accCreateForm.reset() }} className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">Cancelar</button>
+                    <button onClick={submitCreate} disabled={!contact.email || !accCreateForm.data.password || accCreateForm.processing}
                       className="flex-1 px-3 py-1.5 text-xs bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50">
-                      {accountBusy ? 'A criar…' : 'Criar conta'}
+                      {accCreateForm.processing ? 'A criar…' : 'Criar conta'}
                     </button>
                   </div>
                 </div>

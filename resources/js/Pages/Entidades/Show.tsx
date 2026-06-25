@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Head, Link, router, useForm } from '@inertiajs/react'
 import AdminLayout from '@/Layouts/AdminLayout'
 import {
   ArrowLeft, Mail, Phone, Smartphone, MapPin, Globe,
-  FileText, Edit3, Trash2, Calendar, X, ChevronRight,
+  FileText, Edit3, Trash2, Calendar, X, ChevronRight, Camera,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -23,6 +23,21 @@ const RESERVA_STATUS_COLORS: Record<string, string> = {
 export default function EntidadesShow({ contact, entityTypes }: any) {
   const [editing, setEditing] = useState(false)
   const color = contact.person_type?.color ?? '#6b7280'
+
+  // ── Foto de perfil ──────────────────────────────────────────────────────────
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(contact.avatar_url ?? null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+    const formData = new FormData()
+    formData.append('avatar', file)
+    router.post(`/entidades/${contact.id}/avatar`, formData, { preserveScroll: true })
+  }
 
   const form = useForm({
     name:           contact.name           ?? '',
@@ -61,9 +76,22 @@ export default function EntidadesShow({ contact, entityTypes }: any) {
             <ArrowLeft size={18} className="text-gray-600"/>
           </Link>
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
-              style={{ backgroundColor: color }}>
-              {contact.name?.[0]?.toUpperCase() ?? '?'}
+            <div
+              className="relative group w-12 h-12 rounded-lg flex-shrink-0 cursor-pointer overflow-hidden"
+              onClick={() => avatarInputRef.current?.click()}
+              title="Clica para alterar a foto"
+            >
+              {avatarPreview
+                ? <img src={avatarPreview} alt={contact.name} className="w-full h-full object-cover"/>
+                : <div className="w-full h-full flex items-center justify-center text-white text-lg font-bold"
+                    style={{ backgroundColor: color }}>
+                    {contact.name?.[0]?.toUpperCase() ?? '?'}
+                  </div>
+              }
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <Camera size={14} className="text-white"/>
+              </div>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange}/>
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">

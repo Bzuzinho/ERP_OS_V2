@@ -40,8 +40,8 @@ function Avatar({ name, size = 'md' }: { name: string; size?: 'sm'|'md'|'lg' }) 
   )
 }
 
-export default function EquipasShow({ team, users }: any) {
-  const [editing, setEditing]         = useState(false)
+export default function EquipasShow({ team, users, contacts }: any) {
+  const [editing, setEditing]           = useState(false)
   const [showAddMember, setShowAddMember] = useState(false)
 
   const editForm = useForm({
@@ -55,7 +55,7 @@ export default function EquipasShow({ team, users }: any) {
     is_active:     team.is_active     ?? true,
   })
 
-  const memberForm = useForm({ user_id: '', role: 'membro' })
+  const memberForm = useForm({ contact_id: '', role: 'membro' })
 
   function saveEdit(e: React.FormEvent) {
     e.preventDefault()
@@ -69,9 +69,9 @@ export default function EquipasShow({ team, users }: any) {
     })
   }
 
-  function removeMember(userId: number) {
+  function removeMember(contactId: number) {
     if (confirm('Remover membro da equipa?'))
-      router.delete(`/equipas/${team.id}/membros`, { data: { user_id: userId } })
+      router.delete(`/equipas/${team.id}/membros`, { data: { contact_id: contactId } })
   }
 
   function destroy() {
@@ -79,9 +79,9 @@ export default function EquipasShow({ team, users }: any) {
       router.delete(`/equipas/${team.id}`)
   }
 
-  // Users not already in team
+  // Contacts not already in team
   const memberIds = new Set(team.members.map((m: any) => m.id))
-  const available = users.filter((u: any) => !memberIds.has(u.id))
+  const available = contacts.filter((c: any) => !memberIds.has(c.id))
 
   return (
     <AdminLayout title={team.name}>
@@ -256,12 +256,14 @@ export default function EquipasShow({ team, users }: any) {
               {showAddMember && (
                 <form onSubmit={addMember} className="mb-4 p-4 bg-gray-50 rounded-lg flex gap-3 items-end">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Utilizador</label>
-                    <select value={memberForm.data.user_id} onChange={e => memberForm.setData('user_id', e.target.value)}
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Pessoa</label>
+                    <select value={memberForm.data.contact_id} onChange={e => memberForm.setData('contact_id', e.target.value)}
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-400" required>
                       <option value="">— selecionar —</option>
-                      {available.map((u: any) => (
-                        <option key={u.id} value={u.id}>{u.name}{u.department ? ` — ${u.department}` : ''}</option>
+                      {available.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}{c.type ? ` — ${c.type}` : ''}{c.position ? ` · ${c.position}` : ''}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -297,7 +299,9 @@ export default function EquipasShow({ team, users }: any) {
                       <Avatar name={m.name}/>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-gray-900 text-sm">{m.name}</span>
+                          <a href={`/pessoas/${m.id}`} className="font-medium text-gray-900 text-sm hover:text-primary-600">
+                            {m.name}
+                          </a>
                           <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium', roleColor[m.role] ?? roleColor.membro)}>
                             {roleLabel[m.role] ?? m.role}
                           </span>
@@ -307,7 +311,9 @@ export default function EquipasShow({ team, users }: any) {
                             </span>
                           )}
                         </div>
-                        {m.department && <p className="text-xs text-gray-400 mt-0.5">{m.department}</p>}
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {[m.type, m.position].filter(Boolean).join(' · ')}
+                        </p>
                       </div>
                       <button onClick={() => removeMember(m.id)}
                         className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">

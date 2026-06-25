@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Contact;
 use App\Models\Department;
 use App\Models\Organization;
 use App\Models\PermissionAction;
 use App\Models\PermissionGrant;
 use App\Models\Role;
 use App\Models\RolePermission;
+use App\Models\ServiceArea;
+use App\Models\Team;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -201,7 +205,7 @@ class SettingsController extends Controller
         User::create([
             'name'            => $contact->name,
             'email'           => $contact->email,
-            'password'        => Hash::make($data['password']),
+            'password'        => $data['password'],
             'role'            => $data['role'],
             'organization_id' => 1,
             'is_active'       => true,
@@ -222,7 +226,7 @@ class SettingsController extends Controller
         $user->update([
             'role'      => $data['role'],
             'is_active' => $data['is_active'] ?? $user->is_active,
-            ...(!empty($data['password']) ? ['password' => Hash::make($data['password'])] : []),
+            ...(!empty($data['password']) ? ['password' => $data['password']] : []),
         ]);
 
         return back()->with('message', 'Acesso de ' . $user->name . ' atualizado.');
@@ -261,29 +265,108 @@ class SettingsController extends Controller
         return back()->with('message', 'Utilizador eliminado.');
     }
 
-    // ── Perfil pessoal ────────────────────────────────────────────────────────
+    // ── Perfil pessoal → redireciona para a ficha de pessoa ──────────────────
     public function profile()
     {
-        return Inertia::render('Perfil/Index', ['user' => Auth::user()]);
+        $user = Auth::user()->load('contact');
+
+        // Se ainda não tem contact, criar automaticamente a partir dos dados do utilizador
+        if (! $user->contact_id) {
+            $contact = Contact::create([
+                'organization_id' => 1,
+                'name'            => $user->name,
+                'email'           => $user->email,
+                'is_active'       => true,
+            ]);
+            $user->update(['contact_id' => $contact->id]);
+            $user->contact_id = $contact->id;
+        }
+
+        return redirect("/pessoas/{$user->contact_id}");
     }
 
+    // updateProfile mantido apenas para compatibilidade (redireciona para pessoa)
     public function updateProfile(Request $request)
     {
         $user = Auth::user();
+        if ($user->contact_id) {
+            return redirect("/pessoas/{$user->contact_id}");
+        }
+        return redirect('/perfil');
+    }
+
+    // ── Áreas Funcionais ───────────────────────────────────────────────────────
+
+    public function areas()
+    {
+        return Inertia::render('Settings/Areas', [
+            'serviceAreas' => ServiceArea::where('organization_id', 1)
+                ->with('teams:id,name,type')
+                ->orderBy('name')
+                ->get(),
+            'allTeams' => Team::where('organization_id', 1)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id','name','type']),
+        ]);
+    }
+
+    public function storeArea(Request $request)
+    {
         $data = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email,'.$user->id,
-            'phone'    => 'nullable|string|max:30',
-            'password' => 'nullable|min:8|confirmed',
+            'name'        => 'required|string|max:100',
+            'description' => 'nullable|string',
+            'color'       => 'nullable|string|max:20',
+            'icon'        => 'nullable|string|max:50',
+            'is_active'   => 'boolean',
+            'team_ids'    => 'nullable|array',
+            'team_ids.*'  => 'exists:teams,id',
         ]);
 
-        $user->update([
-            'name'  => $data['name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'] ?? $user->phone,
-            ...($data['password'] ? ['password' => Hash::make($data['password'])] : []),
+        $teamIds = $data['team_ids'] ?? [];
+        unset($data['team_ids']);
+
+        $data['organization_id'] = 1;
+        $data['slug']            = Str::slug($data['name']);
+        $data['is_active']       = $data['is_active'] ?? true;
+
+        $area = ServiceArea::create($data);
+        if ($teamIds) {
+            $area->teams()->sync($teamIds);
+        }
+
+        return back()->with('message', 'Área funcional criada.');
+    }
+
+    public function updateArea(Request $request, ServiceArea $area)
+    {
+        $data = $request->validate([
+            'name'        => 'required|string|max:100',
+            'description' => 'nullable|string',
+            'color'       => 'nullable|string|max:20',
+            'icon'        => 'nullable|string|max:50',
+            'is_active'   => 'boolean',
+            'team_ids'    => 'nullable|array',
+            'team_ids.*'  => 'exists:teams,id',
         ]);
 
-        return back()->with('message', 'Perfil atualizado com sucesso.');
+        $teamIds = $data['team_ids'] ?? null;
+        unset($data['team_ids']);
+
+        $data['slug'] = Str::slug($data['name']);
+        $area->update($data);
+
+        if ($teamIds !== null) {
+            $area->teams()->sync($teamIds);
+        }
+
+        return back()->with('message', 'Área funcional atualizada.');
+    }
+
+    public function destroyArea(ServiceArea $area)
+    {
+        $area->teams()->detach();
+        $area->delete();
+        return back()->with('message', 'Área eliminada.');
     }
 }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\Contact;
 
 class Team extends Model
 {
@@ -22,10 +23,10 @@ class Team extends Model
         return $this->belongsTo(User::class, 'leader_id');
     }
 
-    /** Membros (utilizadores da plataforma) */
+    /** Membros (pessoas do diretório) */
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'team_members', 'team_id', 'user_id')
+        return $this->belongsToMany(Contact::class, 'team_members', 'team_id', 'contact_id')
                     ->withPivot('role', 'created_at');
     }
 
@@ -39,5 +40,19 @@ class Team extends Model
     public function maintenances(): HasMany
     {
         return $this->hasMany(Maintenance::class, 'assigned_team_id');
+    }
+
+    /** Áreas funcionais a que esta equipa pertence */
+    public function serviceAreas(): BelongsToMany
+    {
+        return $this->belongsToMany(ServiceArea::class, 'service_area_team');
+    }
+
+    /** Pedidos (tickets) atribuídos a esta equipa */
+    public function tickets(): BelongsToMany
+    {
+        return $this->belongsToMany(Ticket::class, 'ticket_teams')
+                    ->withPivot('assigned_by', 'assigned_at')
+                    ->withTimestamps();
     }
 }

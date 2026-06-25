@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Contact;
 use App\Models\PersonType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 /**
@@ -105,6 +106,20 @@ class EntityController extends Controller
 
         $contact->update($data);
         return back()->with('message', 'Entidade atualizada.');
+    }
+
+    public function uploadAvatar(Request $request, Contact $contact)
+    {
+        $request->validate(['avatar' => 'required|image|mimes:jpeg,png,webp,gif|max:2048']);
+
+        if ($contact->avatar) {
+            Storage::disk('public')->delete($contact->avatar);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $contact->update(['avatar' => $path]);
+
+        return back()->with('message', 'Foto atualizada.');
     }
 
     public function destroy(Contact $contact)

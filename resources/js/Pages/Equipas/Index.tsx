@@ -7,7 +7,7 @@ import clsx from 'clsx'
 const typeLabel: Record<string, string> = { interna: 'Interna', externa: 'Externa' }
 const typeColor: Record<string, string> = { interna: 'bg-blue-100 text-blue-700', externa: 'bg-purple-100 text-purple-700' }
 
-export default function EquipasIndex({ teams, users }: any) {
+export default function EquipasIndex({ teams, users, contacts }: any) {
   const [showForm, setShowForm] = useState(false)
   const [expandedTeam, setExpandedTeam] = useState<number | null>(null)
   const [addMemberTeam, setAddMemberTeam] = useState<number | null>(null)
@@ -18,7 +18,7 @@ export default function EquipasIndex({ teams, users }: any) {
     member_ids: [] as number[],
   })
 
-  const memberForm = useForm({ user_id: '', role: 'membro' })
+  const memberForm = useForm({ contact_id: '', role: 'membro' })
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -31,8 +31,8 @@ export default function EquipasIndex({ teams, users }: any) {
     })
   }
 
-  function removeMember(teamId: number, userId: number) {
-    router.delete(`/equipas/${teamId}/membros`, { data: { user_id: userId } })
+  function removeMember(teamId: number, contactId: number) {
+    router.delete(`/equipas/${teamId}/membros`, { data: { contact_id: contactId } })
   }
 
   return (
@@ -176,12 +176,16 @@ export default function EquipasIndex({ teams, users }: any) {
 
                       {addMemberTeam === team.id && (
                         <div className="flex gap-2 mb-3">
-                          <select value={memberForm.data.user_id}
-                            onChange={e => memberForm.setData('user_id', e.target.value)}
+                          <select value={memberForm.data.contact_id}
+                            onChange={e => memberForm.setData('contact_id', e.target.value)}
                             className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-                            <option value="">Selecionar utilizador…</option>
-                            {users.filter((u: any) => !team.members.find((m: any) => m.id === u.id))
-                              .map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                            <option value="">Selecionar pessoa…</option>
+                            {contacts.filter((c: any) => !team.members.find((m: any) => m.id === c.id))
+                              .map((c: any) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}{c.type ? ` — ${c.type}` : ''}
+                                </option>
+                              ))}
                           </select>
                           <select value={memberForm.data.role}
                             onChange={e => memberForm.setData('role', e.target.value)}
@@ -190,7 +194,7 @@ export default function EquipasIndex({ teams, users }: any) {
                             <option value="lider">Líder</option>
                             <option value="supervisor">Supervisor</option>
                           </select>
-                          <button onClick={() => addMember(team.id)} disabled={!memberForm.data.user_id || memberForm.processing}
+                          <button onClick={() => addMember(team.id)} disabled={!memberForm.data.contact_id || memberForm.processing}
                             className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm rounded-lg">
                             Adicionar
                           </button>

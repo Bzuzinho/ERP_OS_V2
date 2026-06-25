@@ -105,9 +105,12 @@ export default function PessoasIndex({ contacts, personTypes, departments, filte
                 <Link key={c.id} href={`/pessoas/${c.id}`}
                   className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
                   {/* Avatar */}
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-                    style={{ backgroundColor: c.person_type?.color ?? '#6b7280' }}>
-                    {c.initials ?? c.name?.[0]?.toUpperCase()}
+                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-white text-sm font-semibold"
+                    style={{ backgroundColor: c.avatar_url ? 'transparent' : (c.person_type?.color ?? '#6b7280') }}>
+                    {c.avatar_url
+                      ? <img src={c.avatar_url} alt={c.name} className="w-full h-full object-cover"/>
+                      : (c.initials ?? c.name?.[0]?.toUpperCase())
+                    }
                   </div>
 
                   <div className="flex-1 min-w-0">

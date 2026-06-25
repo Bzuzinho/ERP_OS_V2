@@ -95,7 +95,7 @@ class TicketController extends Controller
     public function show(Ticket $ticket)
     {
         $ticket->load([
-            'contact','assignee','serviceArea','team','creator',
+            'contact','assignee','serviceArea','teams','creator',
             'comments.user','comments.contact',
             'tasks.assignee',
             'attachments.user',
@@ -114,8 +114,8 @@ class TicketController extends Controller
                 'tasks_done'    => $doneTasks,
             ]),
             'users'        => User::where('is_active', true)->orderBy('name')->get(['id','name']),
-            'serviceAreas' => ServiceArea::where('is_active', true)->get(['id','name']),
-            'teams'        => Team::where('is_active', true)->orderBy('name')->get(['id','name']),
+            'serviceAreas' => ServiceArea::where('is_active', true)->with('teams:id,name')->get(['id','name']),
+            'teams'        => Team::where('is_active', true)->orderBy('name')->get(['id','name','type']),
             'contacts'     => \App\Models\Contact::orderBy('name')->get(['id','name','email','phone']),
         ]);
     }
@@ -166,9 +166,22 @@ class TicketController extends Controller
         $data = $request->validate([
             'service_area_id' => 'nullable|exists:service_areas,id',
             'assigned_to'     => 'nullable|exists:users,id',
+            'team_ids'        => 'nullable|array',
+            'team_ids.*'      => 'exists:teams,id',
         ]);
 
+        $teamIds = $data['team_ids'] ?? null;
+        unset($data['team_ids']);
+
         $ticket->update($data);
+
+        if ($teamIds !== null) {
+            $ticket->teams()->sync(
+                collect($teamIds)->mapWithKeys(fn($id) => [
+                    $id => ['assigned_by' => auth()->id(), 'assigned_at' => now()]
+                ])->all()
+            );
+        }
 
         $ticket->statusHistory()->create([
             'user_id'    => auth()->id(),
@@ -178,6 +191,23 @@ class TicketController extends Controller
         ]);
 
         return back()->with('message', 'Encaminhamento guardado.');
+    }
+
+    // PATCH /pedidos/{ticket}/equipas
+    public function updateTeams(Request $request, Ticket $ticket)
+    {
+        $data = $request->validate([
+            'team_ids'   => 'nullable|array',
+            'team_ids.*' => 'exists:teams,id',
+        ]);
+
+        $ticket->teams()->sync(
+            collect($data['team_ids'] ?? [])->mapWithKeys(fn($id) => [
+                $id => ['assigned_by' => auth()->id(), 'assigned_at' => now()]
+            ])->all()
+        );
+
+        return back()->with('message', 'Equipas actualizadas.');
     }
 
     // PATCH /pedidos/{ticket}/atribuir

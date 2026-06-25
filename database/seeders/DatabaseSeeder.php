@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use App\Models\{
     Organization, User, PersonType, Contact, Department,
     ServiceArea, Team, Space, SpaceReservation,
@@ -52,35 +51,35 @@ class DatabaseSeeder extends Seeder
         $admin = User::firstOrCreate(['email' => 'admin@jf-santamaria.pt'], [
             'organization_id' => $oid,
             'name'     => 'Ricardo Ferreira',
-            'password' => Hash::make('password'),
+            'password' => 'password',
             'role'     => 'admin',
             'is_active'=> true,
         ]);
         $exec = User::firstOrCreate(['email' => 'presidente@jf-santamaria.pt'], [
             'organization_id' => $oid,
             'name'     => 'Ana Sousa',
-            'password' => Hash::make('password'),
+            'password' => 'password',
             'role'     => 'executivo',
             'is_active'=> true,
         ]);
         $op1 = User::firstOrCreate(['email' => 'joao.santos@jf-santamaria.pt'], [
             'organization_id' => $oid,
             'name'     => 'João Santos',
-            'password' => Hash::make('password'),
+            'password' => 'password',
             'role'     => 'operacional',
             'is_active'=> true,
         ]);
         $op2 = User::firstOrCreate(['email' => 'filipa.costa@jf-santamaria.pt'], [
             'organization_id' => $oid,
             'name'     => 'Filipa Costa',
-            'password' => Hash::make('password'),
+            'password' => 'password',
             'role'     => 'operacional',
             'is_active'=> true,
         ]);
         $viewer = User::firstOrCreate(['email' => 'paulo.marques@jf-santamaria.pt'], [
             'organization_id' => $oid,
             'name'     => 'Paulo Marques',
-            'password' => Hash::make('password'),
+            'password' => 'password',
             'role'     => 'manutencao',
             'is_active'=> true,
         ]);
@@ -199,10 +198,10 @@ class DatabaseSeeder extends Seeder
 
         // Membros das equipas
         DB::table('team_members')->insertOrIgnore([
-            ['team_id'=>$equipaOp->id,   'user_id'=>$op1->id,   'role'=>'lider',  'created_at'=>$now],
-            ['team_id'=>$equipaOp->id,   'user_id'=>$viewer->id,'role'=>'membro', 'created_at'=>$now],
-            ['team_id'=>$equipaAdmin->id,'user_id'=>$op2->id,   'role'=>'lider',  'created_at'=>$now],
-            ['team_id'=>$equipaAdmin->id,'user_id'=>$exec->id,  'role'=>'membro', 'created_at'=>$now],
+            ['team_id'=>$equipaOp->id,   'contact_id'=>$pessoas[6]->id, 'role'=>'lider',  'created_at'=>$now],
+            ['team_id'=>$equipaOp->id,   'contact_id'=>$pessoas[8]->id, 'role'=>'membro', 'created_at'=>$now],
+            ['team_id'=>$equipaAdmin->id,'contact_id'=>$pessoas[7]->id, 'role'=>'lider',  'created_at'=>$now],
+            ['team_id'=>$equipaAdmin->id,'contact_id'=>$pessoas[5]->id, 'role'=>'membro', 'created_at'=>$now],
         ]);
 
         $this->command->info('✔ Equipas criadas');

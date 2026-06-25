@@ -20,18 +20,23 @@ class ConversationController extends Controller
     // ── Lista de conversas ────────────────────────────────────────────────────
     public function index()
     {
-        $userId = Auth::id();
+        $user   = Auth::user();
+        $userId = $user->id;
+        $isAdmin = $user->role === 'admin';
 
-        $conversations = Conversation::whereHas('participants', fn($q) => $q->where('user_id', $userId))
-            ->with([
-                'participants',
-                'participantRecords',
-                'latestMessage.user',
-                'latestMessage.attachments',
-            ])
-            ->orderByDesc('last_message_at')
-            ->get()
-            ->map(fn($c) => $this->formatConversation($c, $userId));
+        $query = Conversation::with([
+            'participants',
+            'participantRecords',
+            'latestMessage.user',
+            'latestMessage.attachments',
+        ])->orderByDesc('last_message_at');
+
+        if (!$isAdmin) {
+            $query->whereHas('participants', fn($q) => $q->where('user_id', $userId));
+        }
+
+        $conversations = $query->get()
+            ->map(fn($c) => $this->formatConversation($c, $userId, $isAdmin));
 
         $users = User::where('is_active', true)
             ->where('id', '!=', $userId)
@@ -42,26 +47,29 @@ class ConversationController extends Controller
             'conversations'   => $conversations,
             'users'           => $users,
             'activeId'        => null,
+            'isAdmin'         => $isAdmin,
         ]);
     }
 
     // ── Abrir conversa ────────────────────────────────────────────────────────
     public function show(Conversation $conversation)
     {
-        $userId = Auth::id();
+        $user    = Auth::user();
+        $userId  = $user->id;
+        $isAdmin = $user->role === 'admin';
+        $isParticipant = $conversation->participants()->where('user_id', $userId)->exists();
 
-        // Verificar participação
-        abort_unless(
-            $conversation->participants()->where('user_id', $userId)->exists(),
-            403
-        );
+        // Admins podem ver qualquer conversa; outros só as suas
+        abort_unless($isParticipant || $isAdmin, 403);
 
-        // Marcar como lido
-        $conversation->participantRecords()
-            ->where('user_id', $userId)
-            ->update(['last_read_at' => now()]);
+        // Marcar como lido (só se for participante)
+        if ($isParticipant) {
+            $conversation->participantRecords()
+                ->where('user_id', $userId)
+                ->update(['last_read_at' => now()]);
+        }
 
-        // Mensagens (últimas 100, depois pagination)
+        // Mensagens (últimas 100)
         $messages = $conversation->messages()
             ->with(['user', 'attachments', 'parent.user', 'linkedTask', 'linkedTicket'])
             ->latest()
@@ -71,11 +79,15 @@ class ConversationController extends Controller
             ->values();
 
         // Lista de conversas (sidebar)
-        $conversations = Conversation::whereHas('participants', fn($q) => $q->where('user_id', $userId))
-            ->with(['participants', 'participantRecords', 'latestMessage.user', 'latestMessage.attachments'])
-            ->orderByDesc('last_message_at')
-            ->get()
-            ->map(fn($c) => $this->formatConversation($c, $userId));
+        $convQuery = Conversation::with(['participants', 'participantRecords', 'latestMessage.user', 'latestMessage.attachments'])
+            ->orderByDesc('last_message_at');
+
+        if (!$isAdmin) {
+            $convQuery->whereHas('participants', fn($q) => $q->where('user_id', $userId));
+        }
+
+        $conversations = $convQuery->get()
+            ->map(fn($c) => $this->formatConversation($c, $userId, $isAdmin));
 
         $users = User::where('is_active', true)
             ->where('id', '!=', $userId)
@@ -83,11 +95,12 @@ class ConversationController extends Controller
             ->get(['id', 'name', 'email', 'avatar']);
 
         return Inertia::render('Chat/Index', [
-            'conversations'  => $conversations,
-            'users'          => $users,
-            'activeId'       => $conversation->id,
-            'activeConversation' => $this->formatConversation($conversation->load('participants', 'participantRecords'), $userId),
-            'messages'       => $messages,
+            'conversations'      => $conversations,
+            'users'              => $users,
+            'activeId'           => $conversation->id,
+            'activeConversation' => $this->formatConversation($conversation->load('participants', 'participantRecords'), $userId, $isAdmin),
+            'messages'           => $messages,
+            'isAdmin'            => $isAdmin,
         ]);
     }
 
@@ -376,11 +389,14 @@ class ConversationController extends Controller
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
-    private function formatConversation(Conversation $c, int $userId): array
+    private function formatConversation(Conversation $c, int $userId, bool $isAdmin = false): array
     {
         $latest  = $c->latestMessage;
-        $unread  = $c->unreadCount($userId);
-        $others  = $c->participants->where('id', '!=', $userId)->values();
+        $isParticipant = $c->participants->contains('id', $userId);
+        $unread  = ($isParticipant) ? $c->unreadCount($userId) : 0;
+        $others  = $isParticipant
+            ? $c->participants->where('id', '!=', $userId)->values()
+            : $c->participants->values();
         $display = $c->type === 'group'
             ? ($c->name ?? 'Grupo')
             : ($others->first()?->name ?? 'Conversa');
@@ -402,8 +418,9 @@ class ConversationController extends Controller
                 'user_name'  => $latest->user?->name,
                 'created_at' => $latest->created_at,
             ] : null,
-            'unread_count'  => $unread,
-            'last_message_at' => $c->last_message_at,
+            'unread_count'   => $unread,
+            'last_message_at'=> $c->last_message_at,
+            'is_observer'    => $isAdmin && !$isParticipant,
         ];
     }
 }

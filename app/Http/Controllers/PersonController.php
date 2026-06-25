@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\PermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 /**
@@ -214,7 +215,7 @@ class PersonController extends Controller
         }
 
         $request->validate([
-            'password' => 'required|min:8',
+            'password' => 'required|min:4',
             'role'     => 'required|in:admin,executivo,administrativo,operacional',
         ]);
 
@@ -226,7 +227,7 @@ class PersonController extends Controller
         User::create([
             'name'            => $contact->name,
             'email'           => $contact->email,
-            'password'        => Hash::make($request->password),
+            'password'        => $request->password,
             'role'            => $request->role,
             'organization_id' => 1,
             'is_active'       => true,
@@ -255,13 +256,13 @@ class PersonController extends Controller
         $data = $request->validate([
             'role'      => 'required|in:admin,executivo,administrativo,operacional',
             'is_active' => 'boolean',
-            'password'  => 'nullable|min:8',
+            'password'  => 'nullable|min:4',
         ]);
 
         $user->update([
             'role'      => $data['role'],
             'is_active' => $data['is_active'] ?? $user->is_active,
-            ...(!empty($data['password']) ? ['password' => Hash::make($data['password'])] : []),
+            ...(!empty($data['password']) ? ['password' => $data['password']] : []),
         ]);
 
         return back()->with('message', 'Acesso atualizado.');
@@ -316,9 +317,12 @@ class PersonController extends Controller
         return back()->with('message', 'Pessoa atualizada.');
     }
 
-    public function destroy(Contact $contact)
+    public function uploadAvatar(Request $request, Contact $contact)
     {
-        $contact->delete();
-        return redirect('/pessoas')->with('message', 'Pessoa eliminada.');
+        $request->validate(['avatar' => 'required|image|mimes:jpeg,png,webp,gif|max:2048']);
+        if ($contact->avatar) { Storage::disk('public')->delete($contact->avatar); }
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $contact->update(['avatar' => $path]);
+        return back()->with('message', 'Foto atualizada.');
     }
 }

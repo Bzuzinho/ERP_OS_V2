@@ -7,6 +7,7 @@ use App\Models\EmployeeAbsence;
 use App\Models\NotificationRecipient;
 use App\Models\Organization;
 use App\Models\RolePermission;
+use App\Models\TaskChecklistItem;
 use App\Services\PermissionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -30,7 +31,11 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
 
-            'auth' => ['user' => $user],
+            'auth' => fn () => [
+                'user' => $user ? array_merge($user->toArray(), [
+                    'contact_avatar_url' => $user->contact?->avatar_url,
+                ]) : null,
+            ],
 
             'flash' => [
                 'message' => fn () => $request->session()->get('message'),
@@ -71,6 +76,26 @@ class HandleInertiaRequests extends Middleware
                     ->whereNull('read_at')
                     ->count()
                 : 0,
+
+            // Itens de checklist que aguardam validação do utilizador actual
+            'pendingChecklistValidations' => fn () => $user
+                ? TaskChecklistItem::where('validation_status', 'pendente')
+                    ->whereHas('task', fn ($q) =>
+                        $q->where('created_by', $user->id)
+                          ->orWhere('assigned_to', $user->id)
+                    )
+                    ->with(['task:id,title'])
+                    ->orderByDesc('updated_at')
+                    ->take(10)
+                    ->get()
+                    ->map(fn ($item) => [
+                        'id'      => $item->id,
+                        'title'   => $item->title,
+                        'task_id' => $item->task_id,
+                        'task'    => $item->task?->title,
+                    ])
+                    ->values()
+                : [],
 
             // Aprovações pendentes de registos RH — visíveis para quem tem permissão
             'pendingApprovals' => fn () => ($user && PermissionService::check($user, 'hr.ausencia.aprovar'))
