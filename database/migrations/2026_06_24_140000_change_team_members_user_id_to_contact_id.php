@@ -71,7 +71,13 @@ return new class extends Migration
 
     private function uniqueExists(string $table, string $indexName): bool
     {
-        $indexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name=? AND name=?", [$table, $indexName]);
+        $driver = DB::getDriverName();
+        if ($driver === 'sqlite') {
+            $indexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name=? AND name=?", [$table, $indexName]);
+        } else {
+            // PostgreSQL / MySQL
+            $indexes = DB::select("SELECT indexname AS name FROM pg_indexes WHERE tablename=? AND indexname=?", [$table, $indexName]);
+        }
         return count($indexes) > 0;
     }
 };

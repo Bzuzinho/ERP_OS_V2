@@ -23,9 +23,10 @@ return new class extends Migration
 
         // Migrar dados existentes de tickets.team_id → ticket_teams
         if (Schema::hasColumn('tickets', 'team_id')) {
+            $now = now()->toDateTimeString();
             DB::statement("
                 INSERT INTO ticket_teams (ticket_id, team_id, assigned_at, created_at, updated_at)
-                SELECT id, team_id, created_at, datetime('now'), datetime('now')
+                SELECT id, team_id, created_at, '$now', '$now'
                 FROM tickets
                 WHERE team_id IS NOT NULL
             ");
