@@ -920,4 +920,10 @@ export default function ChatIndex({
       {/* Modal nova conversa */}
       {showNew && (
         <NewConvModal
-          users=
+          users={users}
+          onClose={() => setShowNew(false)}
+        />
+      )}
+    </div>
+  )
+}

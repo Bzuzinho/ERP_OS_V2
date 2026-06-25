@@ -203,7 +203,8 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
     }
   }
 
-  const isEmployee = contact.hire_date || contact.position || contact.employee_number || contact.employee_status || contact.department_id
+  const isEmployee = !!(contact.hire_date || contact.position || contact.employee_number)
+  const [showEmployeeFields, setShowEmployeeFields] = useState(isEmployee)
 
   return (
     <AdminLayout title={contact.name}>
@@ -706,6 +707,12 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
                     {accCreateForm.errors.password && (
                       <p className="text-xs text-red-500 mt-1">{accCreateForm.errors.password}</p>
                     )}
+                    {(accCreateForm.errors as any).error && (
+                      <p className="text-xs text-red-500 mt-2 bg-red-50 px-2 py-1 rounded">{(accCreateForm.errors as any).error}</p>
+                    )}
+                    {(accCreateForm.errors as any).error && (
+                      <p className="text-xs text-red-500 mt-1">{(accCreateForm.errors as any).error}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Perfil</label>
@@ -830,10 +837,16 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
 
               {/* ── Dados de Funcionário ─────────────────────── */}
               <div className="pt-4 border-t border-gray-200">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Briefcase size={12}/> Dados de Funcionário
-                </p>
-                <div className="space-y-3">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Briefcase size={12}/> Dados de Funcionário
+                  </p>
+                  <button type="button" onClick={() => setShowEmployeeFields(v => !v)}
+                    className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${showEmployeeFields ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
+                    {showEmployeeFields ? '✓ É Funcionário' : '+ Marcar como Funcionário'}
+                  </button>
+                </div>
+                {showEmployeeFields && <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Nº Funcionário</label>
@@ -909,7 +922,7 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"/>
                     </div>
                   </div>
-                </div>
+                </div>}
               </div>
 
               {form.errors.name && <p className="text-xs text-red-500">{form.errors.name}</p>}

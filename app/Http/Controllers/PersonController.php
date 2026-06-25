@@ -94,7 +94,12 @@ class PersonController extends Controller
         ]);
 
         $data['organization_id'] = 1;
-        $data['employee_status'] = 'disponível'; // padrão — actualizado automaticamente pelos registos RH
+        // employee_status só fica definido se a pessoa tiver dados de funcionário
+        if (!empty($data['hire_date']) || !empty($data['employee_number']) || !empty($data['position'])) {
+            $data['employee_status'] = $data['employee_status'] ?? 'disponível';
+        } else {
+            unset($data['employee_status']);
+        }
         $contact = Contact::create($data);
 
         return redirect("/pessoas/{$contact->id}")->with('message', 'Pessoa criada com sucesso.');
@@ -219,9 +224,21 @@ class PersonController extends Controller
             'role'     => 'required|in:admin,executivo,administrativo,operacional',
         ]);
 
-        // Verificar se o email já está em uso por outro user
-        if (User::where('email', $contact->email)->exists()) {
-            return back()->withErrors(['error' => 'Este email já está em uso por outra conta.']);
+        // Verificar se o email já está em uso
+        $existingUser = User::where('email', $contact->email)->first();
+
+        if ($existingUser) {
+            if ($existingUser->contact_id && $existingUser->contact_id !== $contact->id) {
+                // Email ligado a outra pessoa — não podemos reutilizar
+                return back()->withErrors(['error' => 'Este email já está em uso por outra pessoa (' . optional($existingUser->contact)->name . '). Altera o email do contacto primeiro.']);
+            }
+            // Email existe mas sem contact ligado (ou ligado a esta mesma pessoa) — actualizar ligação
+            $existingUser->update([
+                'contact_id' => $contact->id,
+                'role'       => $request->role,
+                'is_active'  => true,
+            ]);
+            return back()->with('message', 'Conta existente ligada a esta pessoa.');
         }
 
         User::create([
