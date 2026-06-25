@@ -123,6 +123,8 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenu, setUserMenu]     = useState(false)
   const [bellOpen, setBellOpen]     = useState(false)
+  const [bellNotifs, setBellNotifs] = useState<any[]>([])
+  const [bellLoading, setBellLoading] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const bellRef     = useRef<HTMLDivElement>(null)
   const { url, props } = usePage()
@@ -173,13 +175,19 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
     return () => clearInterval(id)
   }, [authUser?.id])  // eslint-disable-line
 
-  // Estado do push: 'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'
-  const [pushState, setPushState] = useState<'unknown'|'prompt'|'granted'|'denied'|'unsupported'>('unknown')
+  // Estado do push: 'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported' | 'loading'
+  const [pushState, setPushState] = useState<'unknown'|'prompt'|'granted'|'denied'|'unsupported'|'loading'>('unknown')
+  const [pushError, setPushError] = useState<string|null>(null)
 
   // Verificar suporte e estado actual ao montar
   useEffect(() => {
     if (!authUser || !vapidPublicKey) return
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setPushState('unsupported'); return
+    }
+    // iOS só suporta push em PWA (standalone mode)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    if (isIOS && !(navigator as any).standalone) {
       setPushState('unsupported'); return
     }
     const perm = Notification.permission
@@ -195,38 +203,81 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   // Em browsers não-iOS, tentar subscrever automaticamente se permissão já foi dada
   useEffect(() => {
     if (pushState !== 'prompt' || !vapidPublicKey) return
-    // iOS exige gesto — não chamamos automaticamente
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
     if (isIOS) return
     if (Notification.permission === 'granted') doSubscribePush()
   }, [pushState, vapidPublicKey])  // eslint-disable-line
 
-  async function doSubscribePush() {
+  function doSubscribePush() {
     if (!vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return
-    try {
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') { setPushState('denied'); return }
-      const reg = await navigator.serviceWorker.ready
-      let sub = await reg.pushManager.getSubscription()
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        })
+    setPushState('loading')
+    setPushError(null)
+
+    // Chamar requestPermission directamente (sem await) para garantir contexto de gesto no iOS
+    Notification.requestPermission().then(permission => {
+      if (permission !== 'granted') {
+        setPushState(permission === 'denied' ? 'denied' : 'prompt')
+        return
       }
-      const key  = sub.getKey('p256dh')
-      const auth = sub.getKey('auth')
-      await fetch('/chat/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': (document.querySelector('meta[name=csrf-token]') as any)?.content ?? '' },
-        body: JSON.stringify({
-          endpoint:   sub.endpoint,
-          p256dh_key: key  ? btoa(String.fromCharCode(...new Uint8Array(key)))  : '',
-          auth_key:   auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : '',
-        }),
+
+      navigator.serviceWorker.ready.then(reg =>
+        reg.pushManager.getSubscription().then(sub =>
+          sub ?? reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+          })
+        )
+      ).then(sub => {
+        if (!sub) throw new Error('subscribe retornou null')
+        const key  = sub.getKey('p256dh')
+        const auth = sub.getKey('auth')
+        const csrf = (document.querySelector('meta[name=csrf-token]') as any)?.content ?? ''
+        return fetch('/chat/push/subscribe', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+          body: JSON.stringify({
+            endpoint:   sub.endpoint,
+            p256dh_key: key  ? btoa(String.fromCharCode(...new Uint8Array(key)))  : '',
+            auth_key:   auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : '',
+          }),
+        })
+      }).then(res => {
+        if (!res.ok) throw new Error(`Servidor: ${res.status}`)
+        setPushState('granted')
+      }).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[Push] erro ao subscrever:', msg)
+        setPushError(msg)
+        setPushState('prompt')
       })
-      setPushState('granted')
-    } catch { setPushState('prompt') }
+    }).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[Push] requestPermission falhou:', msg)
+      setPushError(msg)
+      setPushState('prompt')
+    })
+  }
+
+  // Carregar notificações reais quando o sino abre
+  async function openBell() {
+    setBellOpen(o => {
+      if (o) return false // fechar
+      return true
+    })
+    setBellLoading(true)
+    try {
+      const res = await fetch('/notificacoes/recentes', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      if (res.ok) setBellNotifs(await res.json())
+    } catch {}
+    setBellLoading(false)
+  }
+
+  async function dismissNotif(id: number) {
+    const csrf = (document.querySelector('meta[name=csrf-token]') as any)?.content ?? ''
+    await fetch(`/notificacoes/${id}/lida-json`, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } })
+    setBellNotifs(prev => prev.filter(n => n.id !== id))
+    setBellCount(prev => Math.max(0, prev - 1))
   }
 
   // Fechar menus ao clicar fora
@@ -451,20 +502,29 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
           </div>
           <div className="flex items-center gap-2">
             {/* Botão de activação de push — aparece só quando ainda não autorizado */}
-            {pushState === 'prompt' && vapidPublicKey && (
+            {(pushState === 'prompt' || pushState === 'loading') && vapidPublicKey && (
               <button
-                onClick={doSubscribePush}
-                title="Ativar notificações push"
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-medium transition-colors"
+                onClick={pushState === 'loading' ? undefined : doSubscribePush}
+                disabled={pushState === 'loading'}
+                title={pushError ? `Erro: ${pushError}` : 'Ativar notificações push'}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${
+                  pushState === 'loading'
+                    ? 'bg-indigo-100 border-indigo-200 text-indigo-400 cursor-wait'
+                    : pushError
+                    ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
+                    : 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700'
+                }`}
               >
                 <Bell size={13}/>
-                <span className="hidden sm:inline">Ativar notificações</span>
+                <span className="hidden sm:inline">
+                  {pushState === 'loading' ? 'A ativar…' : pushError ? 'Tentar novamente' : 'Ativar notificações'}
+                </span>
               </button>
             )}
             {/* Sino ─ dropdown de notificações e aprovações */}
             <div className="relative" ref={bellRef}>
               <button
-                onClick={() => setBellOpen(o => !o)}
+                onClick={openBell}
                 className="relative p-2 rounded-lg hover:bg-black/5 transition-colors">
                 <Bell size={19} className="text-gray-600"/>
                 {totalBell > 0 && (
@@ -479,49 +539,48 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                     <h3 className="text-sm font-semibold text-gray-800">Notificações</h3>
                     {totalBell > 0 && (
-                      <span className="text-xs text-gray-400">{totalBell} pendente{totalBell !== 1 ? 's' : ''}</span>
+                      <button
+                        onClick={async () => {
+                          const csrf = (document.querySelector('meta[name=csrf-token]') as any)?.content ?? ''
+                          await fetch('/notificacoes/marcar-todas', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } })
+                                                  setBellNotifs([]); setBellCount(0)
+                        }}
+                        className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                        Limpar todas
+                      </button>
                     )}
                   </div>
 
-                  <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50">
+                  <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-50">
                     {/* Aprovações de RH pendentes */}
                     {pendingApprovals.length > 0 && (
                       <div>
-                        <div className="px-4 py-2 bg-amber-50">
-                          <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
-                            <Clock size={11}/> Aprovações pendentes de RH
+                        <div className="px-4 py-1.5 bg-amber-50">
+                          <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
+                            <Clock size={10}/> Aprovações RH
                           </p>
                         </div>
                         {pendingApprovals.map((a: any) => (
-                          <div key={a.id} className="px-4 py-3 hover:bg-gray-50 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
+                          <div key={a.id} className="px-4 py-3 hover:bg-gray-50">
+                            <div className="flex items-start justify-between gap-2 mb-2">
                               <div className="min-w-0">
                                 <p className="text-sm font-medium text-gray-800 truncate">{a.person}</p>
-                                <p className="text-xs text-gray-500 capitalize">
-                                  {a.type.replace(/_/g, ' ')}
-                                  {a.days ? ` · ${a.days} dias` : ''}
+                                <p className="text-xs text-gray-500 truncate">
+                                  {a.type.replace(/_/g, ' ')}{a.days ? ` · ${a.days} dias` : ''} · {a.start_date} → {a.end_date}
                                 </p>
-                                <p className="text-xs text-gray-400">
-                                  {a.start_date} → {a.end_date}
-                                </p>
-                                {a.notes && <p className="text-xs text-gray-400 italic truncate">{a.notes}</p>}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => { router.patch(`/ausencias/${a.id}/aprovar`, {}, { preserveScroll: true }); setBellOpen(false) }}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
-                                <Check size={12}/> Aprovar
+                            <div className="flex items-center gap-1.5">
+                              <button onClick={() => { router.patch(`/ausencias/${a.id}/aprovar`, {}, { preserveScroll: true }); setBellOpen(false) }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100">
+                                <Check size={11}/> Aprovar
                               </button>
-                              <button
-                                onClick={() => { router.patch(`/ausencias/${a.id}/rejeitar`, {}, { preserveScroll: true }); setBellOpen(false) }}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">
-                                <XCircle size={12}/> Rejeitar
+                              <button onClick={() => { router.patch(`/ausencias/${a.id}/rejeitar`, {}, { preserveScroll: true }); setBellOpen(false) }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">
+                                <XCircle size={11}/> Rejeitar
                               </button>
-                              <Link
-                                href={`/pessoas/${a.contact_id}`}
-                                onClick={() => setBellOpen(false)}
-                                className="px-2 py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
+                              <Link href={`/pessoas/${a.contact_id}`} onClick={() => setBellOpen(false)}
+                                className="px-2 py-1 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">
                                 Ver
                               </Link>
                             </div>
@@ -530,26 +589,48 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
                       </div>
                     )}
 
-                    {/* Notificações gerais */}
-                    {unread > 0 && (
-                      <div>
-                        <div className="px-4 py-2 bg-gray-50">
-                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                            Outras notificações ({unread})
-                          </p>
+                    {/* Notificações gerais com conteúdo real */}
+                    {bellLoading && (
+                      <div className="px-4 py-4 text-center text-xs text-gray-400">A carregar…</div>
+                    )}
+                    {!bellLoading && bellNotifs.length > 0 && bellNotifs.map((n: any) => (
+                      <div key={n.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 group">
+                        <div className={`mt-0.5 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold
+                          ${n.type === 'chat' ? 'bg-indigo-500' : n.type === 'tarefa' ? 'bg-amber-500' : 'bg-gray-400'}`}>
+                          {n.type === 'chat' ? '💬' : n.type === 'tarefa' ? '✓' : '•'}
                         </div>
-                        <div className="px-4 py-3">
-                          <Link href="/notificacoes" onClick={() => setBellOpen(false)}
-                            className="text-sm text-primary-600 hover:underline">
-                            Ver todas as notificações →
-                          </Link>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-800 truncate">{n.title}</p>
+                          <p className="text-xs text-gray-500 truncate">{n.message}</p>
+                          <p className="text-[10px] text-gray-300 mt-0.5">{n.created_at}</p>
                         </div>
+                        <div className="flex flex-col gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {n.action_url && (
+                            <Link href={n.action_url} onClick={() => { dismissNotif(n.id); setBellOpen(false) }}
+                              className="px-2 py-0.5 text-[10px] font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100">
+                              Abrir
+                            </Link>
+                          )}
+                          <button onClick={() => dismissNotif(n.id)}
+                            className="px-2 py-0.5 text-[10px] text-gray-400 bg-gray-50 rounded hover:bg-gray-100">
+                            Limpar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {!bellLoading && totalBell === 0 && bellNotifs.length === 0 && pendingApprovals.length === 0 && (
+                      <div className="px-4 py-8 text-center text-sm text-gray-400">
+                        Sem notificações pendentes.
                       </div>
                     )}
 
-                    {totalBell === 0 && (
-                      <div className="px-4 py-8 text-center text-sm text-gray-400">
-                        Sem notificações pendentes.
+                    {bellNotifs.length > 0 && (
+                      <div className="px-4 py-2 border-t border-gray-50">
+                        <Link href="/notificacoes" onClick={() => setBellOpen(false)}
+                          className="text-xs text-primary-600 hover:underline">
+                          Ver todas →
+                        </Link>
                       </div>
                     )}
                   </div>
@@ -637,6 +718,10 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
           {children}
         </main>
       </div>
+    </div>
+  )
+}
+</div>
     </div>
   )
 }

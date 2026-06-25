@@ -232,8 +232,10 @@ Route::middleware('auth')->group(function () {
     // Notificações
     Route::get('/notificacoes',                                     [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notificacoes/unread-count',                        [NotificationController::class, 'unreadCount'])->name('notifications.unreadCount');
+    Route::get('/notificacoes/recentes',                            [NotificationController::class, 'recentes'])->name('notifications.recentes');
     Route::post('/notificacoes/marcar-todas',                       [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
     Route::post('/notificacoes/{recipient}/lida',                   [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notificacoes/{recipient}/lida-json',              [NotificationController::class, 'markReadJson'])->name('notifications.readJson');
 
     // Configurações
     Route::get('/configuracoes',                                    [SettingsController::class, 'index'])->name('settings.index');

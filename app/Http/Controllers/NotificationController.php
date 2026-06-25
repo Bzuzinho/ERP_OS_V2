@@ -47,4 +47,33 @@ class NotificationController extends Controller
             ->count();
         return response()->json(['count' => $count]);
     }
+
+    // Últimas 10 notificações não lidas para o dropdown do sino
+    public function recentes()
+    {
+        $items = NotificationRecipient::with('notification')
+            ->where('user_id', auth()->id())
+            ->whereNull('read_at')
+            ->orderByDesc('created_at')
+            ->take(10)
+            ->get()
+            ->map(fn ($r) => [
+                'id'         => $r->id,
+                'title'      => $r->notification?->title,
+                'message'    => $r->notification?->message,
+                'action_url' => $r->notification?->action_url,
+                'type'       => $r->notification?->type,
+                'created_at' => $r->created_at?->diffForHumans(),
+            ]);
+
+        return response()->json($items);
+    }
+
+    // Marcar uma notificação como lida via AJAX (sem redirect)
+    public function markReadJson(NotificationRecipient $recipient)
+    {
+        abort_unless($recipient->user_id === auth()->id(), 403);
+        $recipient->update(['read_at' => now()]);
+        return response()->json(['ok' => true]);
+    }
 }
