@@ -121,6 +121,13 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   const pathname = url.split('?')[0]
   const authUser = (props as any).auth?.user
   const user = authUser  // alias
+  const nameParts = (authUser?.name ?? '').split(' ').filter(Boolean)
+  const displayName = nameParts.length > 1
+    ? `${nameParts[0]} ${nameParts[nameParts.length - 1]}`
+    : nameParts[0] ?? ''
+  const initials = nameParts.length > 1
+    ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+    : (nameParts[0]?.[0] ?? 'U').toUpperCase()
   const unread = (props as any).unreadNotifications ?? 0
   const unreadMessages = (props as any).unreadMessages ?? 0
   const org = (props as any).organization
@@ -451,12 +458,16 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
                 onClick={() => setUserMenu(!userMenu)}
                 className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-black/5 transition-colors"
               >
-                <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                  style={{ background: authUser?.avatar_color ?? '#6366f1' }}>
-                  {authUser?.name?.[0]?.toUpperCase() ?? 'U'}
-                </div>
+                {authUser?.contact_avatar_url ? (
+                  <img src={authUser.contact_avatar_url} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ background: authUser?.avatar_color ?? '#6366f1' }}>
+                    {initials}
+                  </div>
+                )}
                 <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
-                  {authUser?.name}
+                  {displayName}
                 </span>
                 <ChevronDown size={14} className="text-gray-400 hidden sm:block"/>
               </button>

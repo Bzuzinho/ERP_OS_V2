@@ -41,7 +41,7 @@ class ConversationController extends Controller
         $users = User::where('is_active', true)
             ->where('id', '!=', $userId)
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'avatar']);
+            ->get(['id', 'name', 'email']);
 
         return Inertia::render('Chat/Index', [
             'conversations'   => $conversations,
@@ -92,7 +92,7 @@ class ConversationController extends Controller
         $users = User::where('is_active', true)
             ->where('id', '!=', $userId)
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'avatar']);
+            ->get(['id', 'name', 'email']);
 
         return Inertia::render('Chat/Index', [
             'conversations'      => $conversations,
@@ -124,7 +124,7 @@ class ConversationController extends Controller
             $existing = Conversation::where('type', 'direct')
                 ->whereHas('participants', fn($q) => $q->where('user_id', $userId))
                 ->whereHas('participants', fn($q) => $q->where('user_id', $other))
-                ->whereHas('participantRecords', fn($q) => $q->selectRaw('count(*) = 2'))
+                ->has('participantRecords', '=', 2)
                 ->first();
 
             if ($existing) {
@@ -416,11 +416,10 @@ class ConversationController extends Controller
             'name'         => $display,
             'avatar_color' => $c->avatar_color,
             'participants' => $c->participants->map(fn($u) => [
-                'id'       => $u->id,
-                'name'   => $u->name,
-                'avatar' => $u->avatar,
+                'id'   => $u->id,
+                'name' => $u->name,
             ]),
-            'others'         => $others->map(fn($u) => ['id' => $u->id, 'name' => $u->name, 'avatar' => $u->avatar]),
+            'others' => $others->map(fn($u) => ['id' => $u->id, 'name' => $u->name]),
             'latest_message' => $latest ? [
                 'body'       => $latest->deleted_at ? '🗑 Mensagem apagada' : ($latest->body ?? '📎 Anexo'),
                 'type'       => $latest->type,
