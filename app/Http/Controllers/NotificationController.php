@@ -39,4 +39,12 @@ class NotificationController extends Controller
             ->update(['read_at' => now()]);
         return back()->with('message', 'Todas marcadas como lidas.');
     }
+
+    public function unreadCount()
+    {
+        $count = NotificationRecipient::where('user_id', auth()->id())
+            ->whereNull('read_at')
+            ->count();
+        return response()->json(['count' => $count]);
+    }
 }

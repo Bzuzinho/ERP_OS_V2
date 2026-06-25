@@ -142,7 +142,22 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   const org = (props as any).organization
   const flash = (props as any).flash as { message?: string; error?: string } | undefined
   const pendingApprovals: any[] = (props as any).pendingApprovals ?? []
-  const totalBell = unread + pendingApprovals.length
+
+  // Sino dinâmico (polling a cada 20s)
+  const [bellCount, setBellCount] = useState(unread)
+  useEffect(() => { setBellCount(unread) }, [unread])
+  useEffect(() => {
+    if (!authUser) return
+    const id = window.setInterval(async () => {
+      try {
+        const res = await fetch('/notificacoes/unread-count', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        if (res.ok) { const d = await res.json(); setBellCount(d.count ?? 0) }
+      } catch {}
+    }, 20000)
+    return () => clearInterval(id)
+  }, [authUser?.id])  // eslint-disable-line
+
+  const totalBell = bellCount + pendingApprovals.length
 
   // Badge do chat dinâmico (polling a cada 15s para actualizar sem reload)
   const [chatBadge, setChatBadge] = useState(unreadMessages)

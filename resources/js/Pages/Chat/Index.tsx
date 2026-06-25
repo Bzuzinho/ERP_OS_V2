@@ -536,7 +536,24 @@ export default function ChatIndex({
             const newMsgs = res.data.messages.filter((m: Msg) => !ids.has(m.id))
             if (newMsgs.length === 0) return prev
             lastMsgTimeRef.current = newMsgs[newMsgs.length - 1].created_at
-            return [...prev, ...newMsgs]
+            const merged = [...prev, ...newMsgs]
+            // Garantir ordem cronológica independentemente da origem
+            merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            return merged
+          })
+          // Actualizar posição da conversa na lista (mais recente no topo)
+          setConvs(prev => {
+            const lastMsg = res.data.messages[res.data.messages.length - 1]
+            const updated = prev.map(c => c.id === convId ? {
+              ...c,
+              last_message_at: lastMsg.created_at,
+              latest_message: { body: lastMsg.body ?? '📎', type: lastMsg.type, user_name: lastMsg.user?.name, created_at: lastMsg.created_at },
+            } : c)
+            return updated.sort((a, b) => {
+              if (!a.last_message_at) return 1
+              if (!b.last_message_at) return -1
+              return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+            })
           })
         }
       } catch {}
@@ -581,12 +598,24 @@ export default function ChatIndex({
       const res = await axios.post(`/chat/${active.id}/messages`, form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      setMessages(prev => [...prev, res.data])
+      setMessages(prev => {
+        const merged = [...prev, res.data]
+        merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        return merged
+      })
       lastMsgTimeRef.current = res.data.created_at
-      setConvs(prev => prev.map(c => c.id === active.id ? {
-        ...c, latest_message: { body: body || '📎', type: 'text', user_name: authUser?.name, created_at: res.data.created_at },
-        last_message_at: res.data.created_at,
-      } : c))
+      setConvs(prev => {
+        const updated = prev.map(c => c.id === active.id ? {
+          ...c,
+          latest_message: { body: body || '📎', type: 'text', user_name: authUser?.name, created_at: res.data.created_at },
+          last_message_at: res.data.created_at,
+        } : c)
+        return updated.sort((a, b) => {
+          if (!a.last_message_at) return 1
+          if (!b.last_message_at) return -1
+          return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+        })
+      })
     } catch {}
   }
 
@@ -646,10 +675,11 @@ export default function ChatIndex({
   const filteredConvs = convs.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
   const totalUnread = convs.reduce((sum, c) => sum + c.unread_count, 0)
 
-  // Group messages by date
+  // Group messages by date (always sorted chronologically)
   function groupMessages(msgs: Msg[]) {
+    const sorted = [...msgs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     const groups: { date: string; msgs: Msg[] }[] = []
-    msgs.forEach(m => {
+    sorted.forEach(m => {
       const d = new Date(m.created_at).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
       const last = groups[groups.length - 1]
       if (last?.date === d) last.msgs.push(m)
