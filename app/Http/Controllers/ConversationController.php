@@ -521,27 +521,6 @@ class ConversationController extends Controller
         return response()->json(['ticket_id' => $ticket->id, 'ticket' => $ticket]);
     }
 
-    // ── Subscrever push notifications ─────────────────────────────────────────
-    public function subscribePush(Request $request)
-    {
-        $request->validate([
-            'endpoint'   => 'required|url',
-            'p256dh_key' => 'required|string',
-            'auth_key'   => 'required|string',
-        ]);
-
-        Auth::user()->pushSubscriptions()->updateOrCreate(
-            ['endpoint' => $request->endpoint],
-            [
-                'p256dh_key' => $request->p256dh_key,
-                'auth_key'   => $request->auth_key,
-                'user_agent' => $request->userAgent(),
-            ]
-        );
-
-        return response()->json(['ok' => true]);
-    }
-
     // ── Helper ────────────────────────────────────────────────────────────────
     private function formatConversation(Conversation $c, int $userId, bool $isAdmin = false): array
     {
