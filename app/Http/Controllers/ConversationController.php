@@ -413,4 +413,20 @@ class ConversationController extends Controller
             'name'         => $display,
             'avatar_color' => $c->avatar_color,
             'participants' => $c->participants->map(fn($u) => [
-                'id'  
+                'id'       => $u->id,
+                'name'   => $u->name,
+                'avatar' => $u->avatar,
+            ]),
+            'others'         => $others->map(fn($u) => ['id' => $u->id, 'name' => $u->name, 'avatar' => $u->avatar]),
+            'latest_message' => $latest ? [
+                'body'       => $latest->deleted_at ? '🗑 Mensagem apagada' : ($latest->body ?? '📎 Anexo'),
+                'type'       => $latest->type,
+                'user_name'  => $latest->user?->name,
+                'created_at' => $latest->created_at,
+            ] : null,
+            'unread_count'    => $unread,
+            'last_message_at' => $c->last_message_at,
+            'is_observer'     => $isAdmin && !$isParticipant,
+        ];
+    }
+}
