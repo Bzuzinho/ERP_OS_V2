@@ -225,8 +225,11 @@ class ConversationController extends Controller
     // ── Enviar mensagem ───────────────────────────────────────────────────────
     public function sendMessage(Request $request, Conversation $conversation)
     {
-        $userId = Auth::id();
-        abort_unless($conversation->participants()->where('user_id', $userId)->exists(), 403);
+        $user    = Auth::user();
+        $userId  = $user->id;
+        $isAdmin = $user->role === 'admin';
+        $isParticipant = $conversation->participants()->where('user_id', $userId)->exists();
+        abort_unless($isParticipant || $isAdmin, 403);
 
         $request->validate([
             'body'              => 'nullable|string|max:4000',

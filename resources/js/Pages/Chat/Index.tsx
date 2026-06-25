@@ -866,10 +866,6 @@ export default function ChatIndex({
                       <StopCircle size={18}/>
                     </button>
                   </div>
-                ) : active?.is_observer ? (
-                  <div className="flex items-center justify-center gap-2 py-3 text-xs text-gray-400 bg-gray-50 rounded-2xl border border-gray-200">
-                    <span>👁 Modo leitura — estás a observar esta conversa como administrador</span>
-                  </div>
                 ) : (
                   <form onSubmit={sendMessage} className="flex items-end gap-2">
                     {/* File attachment */}
@@ -924,20 +920,4 @@ export default function ChatIndex({
       {/* Modal nova conversa */}
       {showNew && (
         <NewConvModal
-          users={users}
-          onClose={() => setShowNew(false)}
-        />
-      )}
-
-      {/* Modal acção de mensagem */}
-      {actionModal && (
-        <ActionModal
-          type={actionModal.type}
-          msg={actionModal.msg}
-          convId={active!.id}
-          onClose={() => setActionModal(null)}
-        />
-      )}
-    </AdminLayout>
-  )
-}
+          users=
