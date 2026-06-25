@@ -39,6 +39,16 @@ class Contact extends Model
     // Registos RH (ausências, férias, licenças)
     public function absences()     { return $this->hasMany(EmployeeAbsence::class); }
 
+    // Quando o nome do contact muda, actualizar users.name do utilizador ligado
+    protected static function booted(): void
+    {
+        static::updated(function (Contact $contact) {
+            if ($contact->wasChanged('name') && $contact->user()->exists()) {
+                $contact->user()->update(['name' => $contact->name]);
+            }
+        });
+    }
+
     public function isEmployee(): bool
     {
         return (bool) ($this->hire_date || $this->employee_number || $this->position);

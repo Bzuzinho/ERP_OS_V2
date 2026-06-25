@@ -47,52 +47,57 @@ class DatabaseSeeder extends Seeder
         $oid = $org->id;
         $now = Carbon::now();
 
-        // ── Utilizadores ─────────────────────────────────────────────────────
-        $admin = User::firstOrCreate(['email' => 'admin@jf-santamaria.pt'], [
-            'organization_id' => $oid,
-            'name'     => 'Ricardo Ferreira',
-            'password' => 'password',
-            'role'     => 'admin',
-            'is_active'=> true,
-        ]);
-        $exec = User::firstOrCreate(['email' => 'presidente@jf-santamaria.pt'], [
-            'organization_id' => $oid,
-            'name'     => 'Ana Sousa',
-            'password' => 'password',
-            'role'     => 'executivo',
-            'is_active'=> true,
-        ]);
-        $op1 = User::firstOrCreate(['email' => 'joao.santos@jf-santamaria.pt'], [
-            'organization_id' => $oid,
-            'name'     => 'João Santos',
-            'password' => 'password',
-            'role'     => 'operacional',
-            'is_active'=> true,
-        ]);
-        $op2 = User::firstOrCreate(['email' => 'filipa.costa@jf-santamaria.pt'], [
-            'organization_id' => $oid,
-            'name'     => 'Filipa Costa',
-            'password' => 'password',
-            'role'     => 'operacional',
-            'is_active'=> true,
-        ]);
-        $viewer = User::firstOrCreate(['email' => 'paulo.marques@jf-santamaria.pt'], [
-            'organization_id' => $oid,
-            'name'     => 'Paulo Marques',
-            'password' => 'password',
-            'role'     => 'manutencao',
-            'is_active'=> true,
-        ]);
-
-        $this->command->info('✔ Utilizadores criados');
-
-        // ── Person Types ──────────────────────────────────────────────────────
+        // ── Person Types (antes dos utilizadores para poder ligar) ───────────────
         $ptMunicipe   = PersonType::firstOrCreate(['organization_id'=>$oid,'name'=>'Munícipe'],   ['category'=>'pessoa',   'color'=>'#2563eb','sort_order'=>1,'is_system'=>true,'is_active'=>true]);
         $ptFuncionario= PersonType::firstOrCreate(['organization_id'=>$oid,'name'=>'Funcionário'],['category'=>'pessoa',   'color'=>'#059669','sort_order'=>2,'is_system'=>true,'is_active'=>true]);
         $ptPresidente = PersonType::firstOrCreate(['organization_id'=>$oid,'name'=>'Presidente'], ['category'=>'pessoa',   'color'=>'#7c3aed','sort_order'=>3,'is_system'=>true,'is_active'=>true]);
         $ptFornecedor = PersonType::firstOrCreate(['organization_id'=>$oid,'name'=>'Fornecedor'], ['category'=>'entidade', 'color'=>'#dc2626','sort_order'=>10,'is_system'=>true,'is_active'=>true]);
         $ptAssociacao = PersonType::firstOrCreate(['organization_id'=>$oid,'name'=>'Associação'], ['category'=>'entidade', 'color'=>'#059669','sort_order'=>13,'is_system'=>true,'is_active'=>true]);
         $ptEmpresa    = PersonType::firstOrCreate(['organization_id'=>$oid,'name'=>'Empresa'],    ['category'=>'entidade', 'color'=>'#6b7280','sort_order'=>14,'is_system'=>false,'is_active'=>true]);
+
+        // ── Utilizadores + Contacts (uma pessoa = um contact = pode ter acesso) ──
+        // Cada utilizador TEM de ter um contact ligado — o contact é a fonte de verdade do nome
+        $seedUsers = [
+            ['email'=>'admin@jf-santamaria.pt',      'name'=>'Ricardo Ferreira', 'role'=>'admin',         'pt'=>$ptFuncionario],
+            ['email'=>'presidente@jf-santamaria.pt',  'name'=>'Ana Sousa',        'role'=>'executivo',     'pt'=>$ptPresidente],
+            ['email'=>'joao.santos@jf-santamaria.pt', 'name'=>'João Santos',      'role'=>'operacional',   'pt'=>$ptFuncionario],
+            ['email'=>'filipa.costa@jf-santamaria.pt','name'=>'Filipa Costa',     'role'=>'operacional',   'pt'=>$ptFuncionario],
+            ['email'=>'paulo.marques@jf-santamaria.pt','name'=>'Paulo Marques',   'role'=>'manutencao',    'pt'=>$ptFuncionario],
+        ];
+
+        $seedUserModels = [];
+        foreach ($seedUsers as $su) {
+            // Garantir que existe um contact para esta pessoa
+            $contact = Contact::firstOrCreate(
+                ['organization_id' => $oid, 'email' => $su['email']],
+                ['name' => $su['name'], 'person_type_id' => $su['pt']->id, 'is_active' => true]
+            );
+            // Garantir nome correcto no contact (caso já existisse com nome diferente)
+            if ($contact->name !== $su['name']) {
+                $contact->updateQuietly(['name' => $su['name']]);
+            }
+
+            // Criar ou actualizar o utilizador com contact_id
+            $user = User::firstOrCreate(['email' => $su['email']], [
+                'organization_id' => $oid,
+                'name'            => $su['name'],
+                'password'        => 'password',
+                'role'            => $su['role'],
+                'is_active'       => true,
+                'contact_id'      => $contact->id,
+            ]);
+            // Garantir que o utilizador existente fica ligado e com nome correcto
+            $user->updateQuietly(['contact_id' => $contact->id, 'name' => $su['name']]);
+
+            // Ligar contact ao user
+            $contact->updateQuietly(['user_id' => $user->id]);
+
+            $seedUserModels[$su['email']] = $user;
+        }
+
+        [$admin, $exec, $op1, $op2, $viewer] = array_values($seedUserModels);
+
+        $this->command->info('✔ Utilizadores e contacts criados/ligados');
 
         // ── Departamentos ─────────────────────────────────────────────────────
         $deptAdmin = Department::firstOrCreate(['organization_id'=>$oid,'name'=>'Administrativo']);
