@@ -14,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Confiar em todos os proxies do Railway (necessário para HTTPS correcto)
         $middleware->trustProxies(at: '*');
 
+        // Excluir push subscribe do CSRF — iOS PWA não consegue enviar token CSRF válido
+        $middleware->validateCsrfTokens(except: [
+            'chat/push/subscribe',
+        ]);
+
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
