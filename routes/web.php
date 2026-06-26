@@ -253,59 +253,65 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('/debug/fix-users',                                             function () {
         $log = [];
-
-        // 1. Para cada utilizador, tentar ligar ao contacto com o mesmo email
-        $users = \App\Models\User::whereNull('contact_id')->get();
-        foreach ($users as $u) {
-            $contact = \App\Models\Contact::where('email', $u->email)->first();
-            if ($contact) {
-                $u->contact_id = $contact->id;
-                $u->save();
-                $log[] = "Ligado user #{$u->id} ({$u->email}) ao contact #{$contact->id}";
-            } else {
-                $log[] = "Sem contacto para user #{$u->id} ({$u->email} / {$u->name})";
-            }
-        }
-
-        // 2. Desactivar utilizadores sem contact_id (excepto o utilizador actual e o id=1)
         $currentId = auth()->id();
-        $toDeactivate = \App\Models\User::whereNull('contact_id')
-            ->where('id', '!=', $currentId)
-            ->where('id', '!=', 1)
-            ->get();
-        foreach ($toDeactivate as $u) {
-            $u->is_active = false;
-            $u->save();
-            $log[] = "Desactivado user #{$u->id} ({$u->name} / {$u->email})";
-        }
 
-        // 3. Para utilizadores duplicados (mesmo contact_id), manter o de ID menor e desactivar os outros
-        $dupes = \App\Models\User::whereNotNull('contact_id')
-            ->selectRaw('contact_id, MIN(id) as keep_id, COUNT(*) as cnt')
-            ->groupBy('contact_id')
-            ->having('cnt', '>', 1)
-            ->get();
-        foreach ($dupes as $d) {
-            $toRemove = \App\Models\User::where('contact_id', $d->contact_id)
-                ->where('id', '!=', $d->keep_id)
-                ->where('id', '!=', $currentId)
-                ->get();
-            foreach ($toRemove as $u) {
-                // Migrar participações em conversas para o utilizador a manter
-                \Illuminate\Support\Facades\DB::table('conversation_participants')
-                    ->where('user_id', $u->id)
-                    ->update(['user_id' => $d->keep_id]);
-                \App\Models\PushSubscription::where('user_id', $u->id)
-                    ->update(['user_id' => $d->keep_id]);
-                $u->is_active = false;
-                $u->save();
-                $log[] = "Duplicado: desactivado user #{$u->id}, participações migradas para #{$d->keep_id}";
+        \Illuminate\Support\Facades\DB::transaction(function () use (&$log, $currentId) {
+            // 1. Para cada user sem contact_id, procurar contacto pelo email
+            foreach (\App\Models\User::whereNull('contact_id')->get() as $u) {
+                $contact = \App\Models\Contact::where('email', $u->email)->first();
+                if ($contact) {
+                    // Ligar ao contacto existente
+                    \App\Models\User::where('id', $u->id)->update(['contact_id' => $contact->id]);
+                    $log[] = "✓ Ligado user #{$u->id} ({$u->name}) ao contact #{$contact->id}";
+                } else {
+                    // Criar contacto para este utilizador (para não ficar órfão)
+                    $contact = \App\Models\Contact::create([
+                        'organization_id' => 1,
+                        'name'            => $u->name,
+                        'email'           => $u->email,
+                        'person_type_id'  => \App\Models\PersonType::first()?->id,
+                    ]);
+                    \App\Models\User::where('id', $u->id)->update(['contact_id' => $contact->id]);
+                    $log[] = "✓ Criado contacto #{$contact->id} para user #{$u->id} ({$u->name})";
+                }
             }
-        }
 
-        // 4. Estado final
-        $usersAfter = \App\Models\User::orderBy('id')->get(['id', 'name', 'email', 'role', 'contact_id', 'is_active']);
-        return response()->json(['actions' => $log, 'users_after' => $usersAfter]);
+            // 2. Detectar duplicados: vários users com o mesmo contact_id
+            $dupes = \App\Models\User::selectRaw('contact_id, MIN(id) as keep_id, COUNT(*) as cnt')
+                ->whereNotNull('contact_id')
+                ->groupBy('contact_id')
+                ->having('cnt', '>', 1)
+                ->get();
+
+            foreach ($dupes as $d) {
+                // Manter o que está actualmente autenticado, ou o de menor id
+                $keepId = $currentId;
+                $keep = \App\Models\User::where('contact_id', $d->contact_id)->find($keepId);
+                if (!$keep) {
+                    $keepId = $d->keep_id;
+                }
+
+                $toMerge = \App\Models\User::where('contact_id', $d->contact_id)
+                    ->where('id', '!=', $keepId)->get();
+
+                foreach ($toMerge as $u) {
+                    // Migrar tudo para o utilizador a manter
+                    \Illuminate\Support\Facades\DB::table('conversation_participants')
+                        ->where('user_id', $u->id)->update(['user_id' => $keepId]);
+                    \Illuminate\Support\Facades\DB::table('messages')
+                        ->where('user_id', $u->id)->update(['user_id' => $keepId]);
+                    \App\Models\PushSubscription::where('user_id', $u->id)
+                        ->update(['user_id' => $keepId]);
+                    // Desactivar o duplicado
+                    \App\Models\User::where('id', $u->id)->update(['is_active' => false]);
+                    $log[] = "⚠ Duplicado: user #{$u->id} ({$u->name}/{$u->email}) mesclado em #{$keepId} e desactivado";
+                }
+            }
+        });
+
+        $after = \App\Models\User::orderBy('id')
+            ->get(['id', 'name', 'email', 'role', 'contact_id', 'is_active']);
+        return response()->json(['actions' => $log, 'users_after' => $after]);
     });
     Route::get('/debug/push-test',                                             function () {
         $user = auth()->user();
