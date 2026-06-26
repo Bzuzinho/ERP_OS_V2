@@ -80,27 +80,50 @@ export default function TicketsIndex({ tickets, filters, serviceAreas, stats }: 
               <Link href="/pedidos/novo" className="mt-4 text-sm text-primary-600 hover:underline">Criar primeiro pedido</Link>
             </div>
           ) : (
-            <div className="overflow-x-auto"><table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>{['Referência','Título','Estado','Prioridade','Área','Responsável','Data',''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
+            <>
+              {/* Mobile: cards */}
+              <div className="divide-y divide-gray-50 md:hidden">
                 {(tickets?.data ?? []).map((t: any) => (
-                  <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{t.reference}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800 max-w-xs truncate">{t.title}</td>
-                    <td className="px-4 py-3"><span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', statusColors[t.status])}>{t.status?.replace('_',' ')}</span></td>
-                    <td className="px-4 py-3"><span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', priorityColors[t.priority])}>{t.priority}</span></td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{t.service_area?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{t.assignee?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">{new Date(t.created_at).toLocaleDateString('pt-PT')}</td>
-                    <td className="px-4 py-3"><Link href={`/pedidos/${t.id}`} className="text-gray-400 hover:text-primary-600"><ChevronRight size={16} /></Link></td>
-                  </tr>
+                  <Link key={t.id} href={`/pedidos/${t.id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-mono text-xs text-gray-400 mb-0.5">{t.reference}</p>
+                      <p className="text-sm font-medium text-gray-800 truncate">{t.title}</p>
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', statusColors[t.status])}>{t.status?.replace('_',' ')}</span>
+                        <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', priorityColors[t.priority])}>{t.priority}</span>
+                        {t.service_area?.name && <span className="text-xs text-gray-400">{t.service_area.name}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-gray-400">{new Date(t.created_at).toLocaleDateString('pt-PT')}</p>
+                      {t.assignee?.name && <p className="text-xs text-gray-400 mt-0.5">{t.assignee.name}</p>}
+                    </div>
+                  </Link>
                 ))}
-              </tbody>
-            </table></div>
+              </div>
+              {/* Desktop: tabela */}
+              <div className="hidden md:block overflow-x-auto"><table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>{['Referência','Título','Estado','Prioridade','Área','Responsável','Data',''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {(tickets?.data ?? []).map((t: any) => (
+                    <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs text-gray-500">{t.reference}</td>
+                      <td className="px-4 py-3 font-medium text-gray-800 max-w-xs truncate">{t.title}</td>
+                      <td className="px-4 py-3"><span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', statusColors[t.status])}>{t.status?.replace('_',' ')}</span></td>
+                      <td className="px-4 py-3"><span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', priorityColors[t.priority])}>{t.priority}</span></td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{t.service_area?.name ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{t.assignee?.name ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{new Date(t.created_at).toLocaleDateString('pt-PT')}</td>
+                      <td className="px-4 py-3"><Link href={`/pedidos/${t.id}`} className="text-gray-400 hover:text-primary-600"><ChevronRight size={16} /></Link></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+            </>
           )}
           {tickets?.last_page > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">

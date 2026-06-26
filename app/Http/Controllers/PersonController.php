@@ -285,6 +285,27 @@ class PersonController extends Controller
         return back()->with('message', 'Acesso atualizado.');
     }
 
+    public function destroy(Contact $contact)
+    {
+        // Não apagar se tem conta de acesso ACTIVA — pedir para remover primeiro
+        if ($contact->user()->where('is_active', true)->exists()) {
+            return back()->withErrors(['error' => 'Esta pessoa tem conta de acesso activa. Remove a conta em "Conta de Acesso" antes de eliminar.']);
+        }
+
+        // Se tem user inactivo, desvincular antes de apagar
+        $contact->user()->update(['contact_id' => null]);
+
+        // Libertar FK em tickets (nullable)
+        \Illuminate\Support\Facades\DB::table('tickets')->where('contact_id', $contact->id)->update(['contact_id' => null]);
+
+        // Apagar registos dependentes directos
+        $contact->absences()->delete();
+
+        $contact->delete();
+
+        return redirect('/pessoas')->with('message', 'Pessoa eliminada.');
+    }
+
     public function update(Request $request, Contact $contact)
     {
         $data = $request->validate([
