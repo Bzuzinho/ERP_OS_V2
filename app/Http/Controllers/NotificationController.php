@@ -34,10 +34,10 @@ class NotificationController extends Controller
 
     public function markAllRead()
     {
-        NotificationRecipient::where('user_id', auth()->id())
+        $cleared = NotificationRecipient::where('user_id', auth()->id())
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
-        return back()->with('message', 'Todas marcadas como lidas.');
+        return response()->json(['ok' => true, 'cleared' => $cleared]);
     }
 
     public function unreadCount()

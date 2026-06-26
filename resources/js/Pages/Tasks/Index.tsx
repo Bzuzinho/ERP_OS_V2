@@ -106,8 +106,8 @@ export default function TaskIndex({ tasks, filters = {}, users = [], teams = [] 
               {activeFilterCount > 0 && <span className="bg-primary-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>}
             </button>
           </div>
-          <Link href="/tarefas/nova" className="flex items-center gap-1.5 text-sm bg-primary-600 text-white rounded-xl px-4 py-2 hover:bg-primary-700 transition-colors flex-shrink-0">
-            <Plus size={15}/> Nova tarefa
+          <Link href="/tarefas/nova" className="flex items-center gap-1.5 text-sm bg-primary-600 text-white rounded-xl px-3 py-2 hover:bg-primary-700 transition-colors flex-shrink-0">
+            <Plus size={15}/><span className="hidden sm:inline">Nova tarefa</span>
           </Link>
         </div>
 

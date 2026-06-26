@@ -66,8 +66,8 @@ export default function TicketsIndex({ tickets, filters, serviceAreas, stats }: 
               <option value="">Todas prioridades</option>
               {['baixa','normal','alta','urgente'].map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <Link href="/pedidos/novo" className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors">
-              <Plus size={16} /> Novo pedido
+            <Link href="/pedidos/novo" className="flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors flex-shrink-0">
+              <Plus size={16} /><span className="hidden sm:inline">Novo pedido</span>
             </Link>
           </div>
         </div>

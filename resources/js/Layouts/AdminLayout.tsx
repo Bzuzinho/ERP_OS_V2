@@ -510,10 +510,10 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
       )}
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden" style={{ maxWidth: '100vw' }}>
         {/* Top bar */}
         <header
-          className="h-14 border-b border-black/10 flex items-center justify-between px-4 flex-shrink-0"
+          className="h-14 border-b border-black/10 flex items-center justify-between px-4 flex-shrink-0 min-w-0 max-w-full"
           style={{ backgroundColor: 'var(--header-bg)' }}
         >
           <div className="flex items-center gap-3">
@@ -539,7 +539,7 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
                   }`}
                 >
                   <Bell size={13}/>
-                  <span>
+                  <span className="hidden sm:inline">
                     {pushState === 'loading' ? 'A ativar…' : pushError ? 'Tentar novamente' : 'Ativar notif.'}
                   </span>
                 </button>
@@ -583,8 +583,15 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
                       <button
                         onClick={async () => {
                           const csrf = (document.querySelector('meta[name=csrf-token]') as any)?.content ?? ''
-                          await fetch('/notificacoes/marcar-todas', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } })
-                                                  setBellNotifs([]); setBellCount(0)
+                          try {
+                            await fetch('/notificacoes/marcar-todas', {
+                              method: 'POST',
+                              credentials: 'same-origin',
+                              headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                            })
+                          } catch {}
+                          setBellNotifs([])
+                          setBellCount(0)
                         }}
                         className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
                         Limpar todas
@@ -755,7 +762,7 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
         )}
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto min-w-0">
           {children}
         </main>
       </div>
