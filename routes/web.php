@@ -218,13 +218,71 @@ Route::middleware('auth')->group(function () {
         $user = auth()->user();
         if (!$user) return response()->json(['error' => 'not logged in']);
         return response()->json([
-            'user_id'   => $user->id,
-            'user_name' => $user->name,
-            'push_subs' => \App\Models\PushSubscription::where('user_id', $user->id)
-                ->get(['id', 'endpoint', 'created_at'])
-                ->map(fn($s) => ['id' => $s->id, 'endpoint' => substr($s->endpoint, 0, 50), 'created_at' => $s->created_at]),
+            'user_id'    => $user->id,
+            'user_name'  => $user->name,
+            'vapid_pub'  => substr(config('vapid.public_key', ''), 0, 20) . '…',
+            'vapid_set'  => !empty(config('vapid.public_key')) && !empty(config('vapid.private_key')),
+            'push_subs'  => \App\Models\PushSubscription::where('user_id', $user->id)
+                ->get(['id', 'endpoint', 'p256dh_key', 'auth_key', 'created_at'])
+                ->map(fn($s) => [
+                    'id'         => $s->id,
+                    'endpoint'   => substr($s->endpoint, 0, 55),
+                    'p256dh_len' => strlen($s->p256dh_key),
+                    'auth_len'   => strlen($s->auth_key),
+                    'created_at' => $s->created_at,
+                ]),
             'bell_unread' => \App\Models\NotificationRecipient::where('user_id', $user->id)->whereNull('read_at')->count(),
         ]);
+    });
+    Route::get('/debug/push-test',                                             function () {
+        $user = auth()->user();
+        if (!$user) return response()->json(['error' => 'not logged in']);
+
+        $vapidPublicKey  = config('vapid.public_key');
+        $vapidPrivateKey = config('vapid.private_key');
+
+        if (!$vapidPublicKey || !$vapidPrivateKey) {
+            return response()->json(['error' => 'VAPID keys not set', 'pub' => $vapidPublicKey ? 'ok' : 'MISSING', 'priv' => $vapidPrivateKey ? 'ok' : 'MISSING']);
+        }
+
+        $subs = \App\Models\PushSubscription::where('user_id', $user->id)->get();
+        if ($subs->isEmpty()) {
+            return response()->json(['error' => 'No push subscriptions for this user']);
+        }
+
+        $results = [];
+        try {
+            $webPush = new \Minishlink\WebPush\WebPush([
+                'VAPID' => [
+                    'subject'    => config('vapid.subject'),
+                    'publicKey'  => $vapidPublicKey,
+                    'privateKey' => $vapidPrivateKey,
+                ],
+            ]);
+
+            foreach ($subs as $sub) {
+                $webPush->queueNotification(
+                    \Minishlink\WebPush\Subscription::create([
+                        'endpoint' => $sub->endpoint,
+                        'keys'     => ['p256dh' => $sub->p256dh_key, 'auth' => $sub->auth_key],
+                    ]),
+                    json_encode(['title' => 'Teste JuntaOS', 'body' => 'Push a funcionar!', 'url' => '/chat'])
+                );
+            }
+
+            foreach ($webPush->flush() as $report) {
+                $results[] = [
+                    'endpoint' => substr((string) $report->getRequest()->getUri(), 0, 55),
+                    'success'  => $report->isSuccess(),
+                    'expired'  => $report->isSubscriptionExpired(),
+                    'reason'   => $report->getReason(),
+                ];
+            }
+        } catch (\Throwable $e) {
+            return response()->json(['exception' => $e->getMessage(), 'trace' => substr($e->getTraceAsString(), 0, 500)]);
+        }
+
+        return response()->json(['subs_count' => $subs->count(), 'results' => $results]);
     });
 
     // Planeamento — sub-secções fixas (antes das rotas com {plan})
