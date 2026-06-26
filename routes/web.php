@@ -251,6 +251,17 @@ Route::middleware('auth')->group(function () {
             'conversations' => $convs,
         ]);
     });
+    Route::get('/debug/users-convs',                                           function () {
+        $users = \App\Models\User::orderBy('id')->get(['id', 'name', 'email', 'role']);
+        $convs = \App\Models\Conversation::with('participants:id,name')->orderBy('id')->get()
+            ->map(fn($c) => [
+                'id'           => $c->id,
+                'type'         => $c->type,
+                'name'         => $c->name,
+                'participants' => $c->participants->map(fn($u) => ['id' => $u->id, 'name' => $u->name]),
+            ]);
+        return response()->json(['users' => $users, 'conversations' => $convs]);
+    });
     Route::get('/debug/push-test',                                             function () {
         $user = auth()->user();
         if (!$user) return response()->json(['error' => 'not logged in']);
