@@ -46,6 +46,7 @@ class ConversationController extends Controller
             ->map(fn($c) => $this->formatConversation($c, $userId, $isAdmin));
 
         $users = User::where('is_active', true)
+            ->whereNotNull('contact_id')
             ->where('id', '!=', $userId)
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
@@ -97,6 +98,7 @@ class ConversationController extends Controller
             ->map(fn($c) => $this->formatConversation($c, $userId, $isAdmin));
 
         $users = User::where('is_active', true)
+            ->whereNotNull('contact_id')
             ->where('id', '!=', $userId)
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
