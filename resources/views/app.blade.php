@@ -10,6 +10,7 @@
     {{-- PWA --}}
     <link rel="manifest" href="/pwa-manifest">
     @php
+        $org = \App\Models\Organization::find(1);
         $pwaIcon = $org?->logo
             ? \Illuminate\Support\Facades\Storage::disk('public')->url($org->logo)
             : '/icons/icon-192.png';
@@ -21,7 +22,6 @@
     <meta name="apple-mobile-web-app-title" content="{{ $org?->name ?? 'JuntaOS' }}">
     {{-- Tema dinamico da organizacao --}}
     @php
-        $org = \App\Models\Organization::find(1);
 
         $t = [
             'primary'        => $org?->primary_color   ?? '#4f46e5',
