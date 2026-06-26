@@ -4,7 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout'
 import {
   ArrowLeft, Download, Trash2, CheckCircle, Clock, Edit2,
   FileText, FileImage, FileSpreadsheet, File, Upload, X,
-  Eye, EyeOff, Calendar, User, Tag,
+  Eye, EyeOff, Calendar, User, Tag, Send, XCircle, Bell,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -31,11 +31,11 @@ function fmtSize(bytes?: number) {
 
 function FileIconLarge({ mime }: { mime?: string }) {
   const cls = 'w-10 h-10'
-  if (!mime)                                                   return <File            className={clsx(cls, 'text-gray-400')} />
-  if (mime.startsWith('image/'))                               return <FileImage       className={clsx(cls, 'text-purple-500')} />
-  if (mime === 'application/pdf')                              return <FileText        className={clsx(cls, 'text-red-500')} />
-  if (mime.includes('spreadsheet') || mime.includes('excel'))  return <FileSpreadsheet className={clsx(cls, 'text-green-600')} />
-  if (mime.includes('word') || mime.includes('document'))      return <FileText        className={clsx(cls, 'text-blue-500')} />
+  if (!mime)                                                    return <File            className={clsx(cls, 'text-gray-400')} />
+  if (mime.startsWith('image/'))                                return <FileImage       className={clsx(cls, 'text-purple-500')} />
+  if (mime === 'application/pdf')                               return <FileText        className={clsx(cls, 'text-red-500')} />
+  if (mime.includes('spreadsheet') || mime.includes('excel'))   return <FileSpreadsheet className={clsx(cls, 'text-green-600')} />
+  if (mime.includes('word') || mime.includes('document'))       return <FileText        className={clsx(cls, 'text-blue-500')} />
   return <File className={clsx(cls, 'text-gray-400')} />
 }
 
@@ -45,7 +45,7 @@ function DocumentViewer({ doc }: { doc: any }) {
 
   if (!url) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400 bg-gray-50 rounded-xl border border-gray-100">
         <File size={48} className="mb-4 opacity-30" />
         <p className="text-sm">Nenhum ficheiro associado a este documento.</p>
       </div>
@@ -71,7 +71,6 @@ function DocumentViewer({ doc }: { doc: any }) {
     )
   }
 
-  // Fallback for office docs, etc.
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-4 bg-gray-50 rounded-xl border border-gray-100">
       <FileIconLarge mime={mime} />
@@ -88,11 +87,110 @@ function DocumentViewer({ doc }: { doc: any }) {
   )
 }
 
-export default function DocumentShow({ document: doc }: { document: any }) {
-  const [editing, setEditing]     = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [dragOver, setDragOver]   = useState(false)
-  const [newFile, setNewFile]     = useState<File | null>(null)
+// ── Modal "Solicitar aprovação" ────────────────────────────────────────────────
+function RequestApprovalModal({
+  docId, users, onClose,
+}: {
+  docId: number
+  users: { id: number; name: string }[]
+  onClose: () => void
+}) {
+  const [selected, setSelected] = useState<number[]>([])
+  const [notes, setNotes]       = useState('')
+  const [sending, setSending]   = useState(false)
+  const [search, setSearch]     = useState('')
+
+  const filtered = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
+
+  const toggle = (id: number) =>
+    setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (selected.length === 0) return
+    setSending(true)
+    router.post(`/documentos/${docId}/solicitar-aprovacao`, { user_ids: selected, notes }, {
+      onFinish: () => setSending(false),
+      onSuccess: () => onClose(),
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div>
+            <h3 className="font-semibold text-gray-800 text-sm">Solicitar aprovação</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Seleciona as pessoas que devem aprovar</p>
+          </div>
+          <button onClick={onClose}><X size={16} className="text-gray-400"/></button>
+        </div>
+        <form onSubmit={submit} className="p-5 space-y-4">
+          <div>
+            <input
+              type="text" placeholder="Pesquisar pessoa…" value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          <div className="border border-gray-100 rounded-xl divide-y divide-gray-50 max-h-52 overflow-y-auto">
+            {filtered.length === 0 && (
+              <p className="text-center py-6 text-gray-400 text-sm">Nenhum utilizador encontrado</p>
+            )}
+            {filtered.map(u => (
+              <label key={u.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                <input type="checkbox" checked={selected.includes(u.id)} onChange={() => toggle(u.id)}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"/>
+                <span className="text-sm text-gray-700">{u.name}</span>
+              </label>
+            ))}
+          </div>
+
+          {selected.length > 0 && (
+            <div className="text-xs text-primary-600 font-medium">
+              {selected.length} pessoa{selected.length > 1 ? 's' : ''} selecionada{selected.length > 1 ? 's' : ''}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Nota (opcional)</label>
+            <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="Ex: Por favor aprova até sexta-feira…"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"/>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button type="submit" disabled={sending || selected.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg disabled:opacity-60 transition-colors">
+              {sending
+                ? <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                : <Send size={14}/>}
+              Enviar pedido
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ── Página principal ───────────────────────────────────────────────────────────
+export default function DocumentShow({
+  document: doc,
+  users,
+}: {
+  document: any
+  users: { id: number; name: string }[]
+}) {
+  const [editing, setEditing]             = useState(false)
+  const [uploading, setUploading]         = useState(false)
+  const [dragOver, setDragOver]           = useState(false)
+  const [newFile, setNewFile]             = useState<File | null>(null)
+  const [showApprovalModal, setApproval]  = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState({
@@ -109,14 +207,14 @@ export default function DocumentShow({ document: doc }: { document: any }) {
     if (file) setNewFile(file)
   }
 
+  // ── Fix: pass plain object + forceFormData (NOT raw FormData) ────────────
   const submitEdit = (e: React.FormEvent) => {
     e.preventDefault()
     setUploading(true)
-    const fd = new FormData()
-    Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v) })
-    if (newFile) fd.append('file', newFile)
+    const payload: Record<string, any> = { ...form }
+    if (newFile) payload.file = newFile
 
-    router.post(`/documentos/${doc.id}`, fd as any, {
+    router.post(`/documentos/${doc.id}`, payload, {
       forceFormData: true,
       onFinish: () => setUploading(false),
       onSuccess: () => { setEditing(false); setNewFile(null) },
@@ -129,11 +227,19 @@ export default function DocumentShow({ document: doc }: { document: any }) {
     }
   }
 
+  const handleUnapprove = () => {
+    if (confirm('Retirar a aprovação? O documento volta a "Pendente de aprovação".')) {
+      router.post(`/documentos/${doc.id}/desaprovar`)
+    }
+  }
+
   const handleDelete = () => {
     if (confirm('Eliminar este documento? Esta ação não pode ser revertida.')) {
       router.delete(`/documentos/${doc.id}`)
     }
   }
+
+  const hasPendingRequest = !!doc.approval_requested_at && !doc.is_approved
 
   return (
     <AdminLayout title="Documentos">
@@ -155,30 +261,60 @@ export default function DocumentShow({ document: doc }: { document: any }) {
                 {TYPE_LABELS[doc.type] ?? doc.type}
               </span>
               {doc.is_approved
-                ? <span className="flex items-center gap-1 text-xs text-green-600 font-medium"><CheckCircle size={12}/> Aprovado</span>
-                : <span className="flex items-center gap-1 text-xs text-amber-600"><Clock size={12}/> Pendente aprovação</span>}
+                ? <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                    <CheckCircle size={12}/> Aprovado
+                  </span>
+                : hasPendingRequest
+                  ? <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                      <Bell size={12}/> Aguarda aprovação de {doc.approval_requested_from?.name ?? '—'}
+                    </span>
+                  : <span className="flex items-center gap-1 text-xs text-amber-600">
+                      <Clock size={12}/> Pendente de aprovação
+                    </span>
+              }
             </div>
             <h1 className="text-xl font-bold text-gray-900 truncate">{doc.title}</h1>
             {doc.description && <p className="text-sm text-gray-500 mt-1">{doc.description}</p>}
+            {hasPendingRequest && doc.approval_notes && (
+              <p className="text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg mt-2 border border-amber-100">
+                Nota: {doc.approval_notes}
+              </p>
+            )}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
             {doc.file_url && (
               <a href={`/documentos/${doc.id}/download`}
                 className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                 <Download size={14}/><span className="hidden sm:inline">Descarregar</span>
               </a>
             )}
-            {!doc.is_approved && (
-              <button onClick={handleApprove}
-                className="flex items-center gap-1.5 px-3 py-2 border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 rounded-lg text-sm transition-colors">
-                <CheckCircle size={14}/><span className="hidden sm:inline">Aprovar</span>
+
+            {/* Approval actions */}
+            {doc.is_approved ? (
+              <button onClick={handleUnapprove}
+                className="flex items-center gap-1.5 px-3 py-2 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg text-sm transition-colors">
+                <XCircle size={14}/><span className="hidden sm:inline">Retirar aprovação</span>
               </button>
+            ) : (
+              <>
+                <button onClick={handleApprove}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 rounded-lg text-sm transition-colors">
+                  <CheckCircle size={14}/><span className="hidden sm:inline">Aprovar</span>
+                </button>
+                <button onClick={() => setApproval(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-sm transition-colors">
+                  <Send size={14}/><span className="hidden sm:inline">Solicitar aprovação</span>
+                </button>
+              </>
             )}
+
             <button onClick={() => setEditing(!editing)}
               className={clsx('flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm transition-colors',
-                editing ? 'border-primary-300 text-primary-700 bg-primary-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50')}>
+                editing
+                  ? 'border-primary-300 text-primary-700 bg-primary-50'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50')}>
               <Edit2 size={14}/><span className="hidden sm:inline">Editar</span>
             </button>
             <button onClick={handleDelete}
@@ -190,14 +326,14 @@ export default function DocumentShow({ document: doc }: { document: any }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
 
-          {/* Viewer (main) */}
+          {/* Main content */}
           <div className="lg:col-span-3">
             {editing ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h3 className="font-semibold text-gray-800 mb-5">Editar documento</h3>
                 <form onSubmit={submitEdit} className="space-y-4">
 
-                  {/* File replace zone */}
+                  {/* File replace drop zone */}
                   <div
                     onClick={() => fileRef.current?.click()}
                     onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -226,9 +362,15 @@ export default function DocumentShow({ document: doc }: { document: any }) {
                       <>
                         <Upload size={20} className="mx-auto mb-1.5 text-gray-300"/>
                         {doc.file_url
-                          ? <p className="text-sm text-gray-500">Substituir ficheiro actual <span className="text-primary-600 font-medium">(opcional)</span></p>
-                          : <p className="text-sm text-gray-500">Adicionar ficheiro <span className="text-primary-600 font-medium">clique aqui</span></p>}
-                        <p className="text-xs text-gray-400 mt-0.5">até 50 MB</p>
+                          ? <p className="text-sm text-gray-500">
+                              Substituir ficheiro actual <span className="text-primary-600 font-medium">(opcional)</span>
+                            </p>
+                          : <p className="text-sm text-gray-500">
+                              Adicionar ficheiro — <span className="text-primary-600 font-medium">clique aqui</span>
+                            </p>}
+                        {doc.original_name && (
+                          <p className="text-xs text-gray-400 mt-0.5">Actual: {doc.original_name}</p>
+                        )}
                       </>
                     )}
                   </div>
@@ -296,7 +438,7 @@ export default function DocumentShow({ document: doc }: { document: any }) {
           {/* Sidebar */}
           <div className="space-y-4">
 
-            {/* File info */}
+            {/* File card */}
             {doc.file_url && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Ficheiro</h4>
@@ -315,19 +457,20 @@ export default function DocumentShow({ document: doc }: { document: any }) {
             )}
 
             {/* Metadata */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3.5">
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Informação</h4>
 
               <div className="flex items-start gap-2.5">
                 <Tag size={14} className="text-gray-400 mt-0.5 flex-shrink-0"/>
                 <div>
                   <p className="text-xs text-gray-400">Tipo</p>
-                  <p className="text-sm text-gray-700 font-medium capitalize">{TYPE_LABELS[doc.type] ?? doc.type}</p>
+                  <p className="text-sm text-gray-700 font-medium">{TYPE_LABELS[doc.type] ?? doc.type}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
-                {doc.visibility === 'público' ? <Eye size={14} className="text-gray-400 mt-0.5 flex-shrink-0"/>
+                {doc.visibility === 'público'
+                  ? <Eye size={14} className="text-gray-400 mt-0.5 flex-shrink-0"/>
                   : <EyeOff size={14} className="text-gray-400 mt-0.5 flex-shrink-0"/>}
                 <div>
                   <p className="text-xs text-gray-400">Visibilidade</p>
@@ -367,24 +510,57 @@ export default function DocumentShow({ document: doc }: { document: any }) {
                 </div>
               )}
 
-              {doc.is_approved && (
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle size={14} className="text-green-500 mt-0.5 flex-shrink-0"/>
-                  <div>
-                    <p className="text-xs text-gray-400">Aprovado por</p>
-                    <p className="text-sm text-gray-700">{doc.approver?.name ?? '—'}</p>
-                    {doc.approved_at && (
-                      <p className="text-xs text-gray-400">
-                        {new Date(doc.approved_at).toLocaleDateString('pt-PT')}
-                      </p>
-                    )}
+              {/* Approval status */}
+              <div className="pt-1 border-t border-gray-50">
+                {doc.is_approved ? (
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle size={14} className="text-green-500 mt-0.5 flex-shrink-0"/>
+                    <div>
+                      <p className="text-xs text-gray-400">Aprovado por</p>
+                      <p className="text-sm text-gray-700 font-medium">{doc.approver?.name ?? '—'}</p>
+                      {doc.approved_at && (
+                        <p className="text-xs text-gray-400">
+                          {new Date(doc.approved_at).toLocaleDateString('pt-PT')}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : hasPendingRequest ? (
+                  <div className="flex items-start gap-2.5">
+                    <Bell size={14} className="text-amber-500 mt-0.5 flex-shrink-0"/>
+                    <div>
+                      <p className="text-xs text-gray-400">Aprovação solicitada a</p>
+                      <p className="text-sm text-amber-700 font-medium">{doc.approval_requested_from?.name ?? '—'}</p>
+                      {doc.approval_requested_at && (
+                        <p className="text-xs text-gray-400">
+                          {new Date(doc.approval_requested_at).toLocaleDateString('pt-PT')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2.5">
+                    <Clock size={14} className="text-amber-400 mt-0.5 flex-shrink-0"/>
+                    <div>
+                      <p className="text-xs text-gray-400">Estado de aprovação</p>
+                      <p className="text-sm text-amber-600">Pendente</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal "Solicitar aprovação" */}
+      {showApprovalModal && (
+        <RequestApprovalModal
+          docId={doc.id}
+          users={users}
+          onClose={() => setApproval(false)}
+        />
+      )}
     </AdminLayout>
   )
 }

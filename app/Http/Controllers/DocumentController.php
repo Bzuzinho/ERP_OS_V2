@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Models\NotificationRecipient;
+use App\Models\SystemNotification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -52,8 +55,12 @@ class DocumentController extends Controller
 
     public function show(Document $document)
     {
-        $document->load(['creator','approver']);
-        return Inertia::render('Documents/Show', ['document' => $document]);
+        $document->load(['creator','approver','approvalRequestedFrom']);
+        $users = User::orderBy('name')->get(['id','name']);
+        return Inertia::render('Documents/Show', [
+            'document' => $document,
+            'users'    => $users,
+        ]);
     }
 
     public function update(Request $request, Document $document)
@@ -96,11 +103,78 @@ class DocumentController extends Controller
     public function approve(Document $document)
     {
         $document->update([
-            'is_approved' => true,
-            'approved_at' => now(),
-            'approved_by' => auth()->id(),
+            'is_approved'                => true,
+            'approved_at'                => now(),
+            'approved_by'                => auth()->id(),
+            // clear pending request
+            'approval_requested_from_id' => null,
+            'approval_requested_at'      => null,
+            'approval_notes'             => null,
         ]);
+
+        // Notify creator that document was approved
+        if ($document->created_by && $document->created_by !== auth()->id()) {
+            $notif = SystemNotification::create([
+                'organization_id' => 1,
+                'type'            => 'documento_aprovado',
+                'title'           => 'Documento aprovado',
+                'message'         => "O documento \"{$document->title}\" foi aprovado.",
+                'action_url'      => "/documentos/{$document->id}",
+                'priority'        => 'normal',
+            ]);
+            NotificationRecipient::create([
+                'system_notification_id' => $notif->id,
+                'user_id'                => $document->created_by,
+            ]);
+        }
+
         return back()->with('message', 'Documento aprovado.');
+    }
+
+    public function unapprove(Document $document)
+    {
+        $document->update([
+            'is_approved' => false,
+            'approved_at' => null,
+            'approved_by' => null,
+        ]);
+        return back()->with('message', 'Aprovação retirada. Documento voltou a pendente.');
+    }
+
+    public function requestApproval(Request $request, Document $document)
+    {
+        $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'exists:users,id',
+            'notes'    => 'nullable|string|max:500',
+        ]);
+
+        $document->update([
+            // store the first selected user as primary requester
+            'approval_requested_from_id' => $request->user_ids[0],
+            'approval_requested_at'      => now(),
+            'approval_notes'             => $request->notes,
+        ]);
+
+        // Create notification for each selected user
+        $notif = SystemNotification::create([
+            'organization_id' => 1,
+            'type'            => 'aprovacao_pendente',
+            'title'           => 'Aprovação solicitada',
+            'message'         => "O documento \"{$document->title}\" aguarda a sua aprovação." .
+                                 ($request->notes ? " Nota: {$request->notes}" : ''),
+            'action_url'      => "/documentos/{$document->id}",
+            'priority'        => 'high',
+        ]);
+
+        foreach ($request->user_ids as $userId) {
+            NotificationRecipient::create([
+                'system_notification_id' => $notif->id,
+                'user_id'                => $userId,
+            ]);
+        }
+
+        return back()->with('message', 'Pedido de aprovação enviado.');
     }
 
     public function destroy(Document $document)
