@@ -283,7 +283,7 @@ Route::middleware('auth')->group(function () {
                 SELECT contact_id, MIN(id) as keep_id, COUNT(*) as cnt
                 FROM users
                 WHERE contact_id IS NOT NULL AND is_active = true
-                GROUP BY contact_id HAVING cnt > 1
+                GROUP BY contact_id HAVING COUNT(*) > 1
             ");
             foreach ($dupes as $d) {
                 // Se o user actual tem este contact_id, é ele que fica
