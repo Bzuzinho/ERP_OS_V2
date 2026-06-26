@@ -221,21 +221,34 @@ Route::middleware('auth')->group(function () {
     Route::get('/debug/push-status',                                           function () {
         $user = auth()->user();
         if (!$user) return response()->json(['error' => 'not logged in']);
+
+        // Conversas onde este user é participante e quem mais está nelas
+        $convs = \App\Models\ConversationParticipant::where('user_id', $user->id)
+            ->with('conversation.participants')
+            ->get()
+            ->map(fn($cp) => [
+                'conv_id'      => $cp->conversation_id,
+                'participants' => $cp->conversation?->participants->map(fn($u) => ['id' => $u->id, 'name' => $u->name]),
+                'other_users_with_subs' => $cp->conversation?->participants
+                    ->where('id', '!=', $user->id)
+                    ->map(fn($u) => [
+                        'id'        => $u->id,
+                        'name'      => $u->name,
+                        'push_subs' => \App\Models\PushSubscription::where('user_id', $u->id)->count(),
+                    ]),
+            ]);
+
         return response()->json([
-            'user_id'    => $user->id,
-            'user_name'  => $user->name,
-            'vapid_pub'  => substr(config('vapid.public_key', ''), 0, 20) . '…',
-            'vapid_set'  => !empty(config('vapid.public_key')) && !empty(config('vapid.private_key')),
-            'push_subs'  => \App\Models\PushSubscription::where('user_id', $user->id)
-                ->get(['id', 'endpoint', 'p256dh_key', 'auth_key', 'created_at'])
-                ->map(fn($s) => [
-                    'id'         => $s->id,
-                    'endpoint'   => substr($s->endpoint, 0, 55),
-                    'p256dh_len' => strlen($s->p256dh_key),
-                    'auth_len'   => strlen($s->auth_key),
-                    'created_at' => $s->created_at,
-                ]),
+            'user_id'     => $user->id,
+            'user_name'   => $user->name,
+            'push_subs'   => \App\Models\PushSubscription::where('user_id', $user->id)->count(),
             'bell_unread' => \App\Models\NotificationRecipient::where('user_id', $user->id)->whereNull('read_at')->count(),
+            'last_notifs' => \App\Models\NotificationRecipient::where('user_id', $user->id)
+                ->latest()->limit(5)
+                ->with('notification')
+                ->get()
+                ->map(fn($nr) => ['id' => $nr->id, 'title' => $nr->notification?->title, 'read_at' => $nr->read_at, 'created_at' => $nr->created_at]),
+            'conversations' => $convs,
         ]);
     });
     Route::get('/debug/push-test',                                             function () {
