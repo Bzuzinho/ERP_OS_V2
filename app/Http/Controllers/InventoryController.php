@@ -149,7 +149,7 @@ class InventoryController extends Controller
             ->orderBy('name')
             ->get();
 
-        $recentMovements = InventoryMovement::with(['item','registeredBy'])
+        $recentMovements = InventoryMovement::with(['item','user'])
             ->where('organization_id', $this->orgId)
             ->orderByDesc('occurred_at')
             ->limit(50)

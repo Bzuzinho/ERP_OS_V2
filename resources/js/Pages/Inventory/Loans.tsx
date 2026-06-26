@@ -241,7 +241,7 @@ export default function InventoryLoans({ activeLoans, historyLoans, items, suppl
     <>
       <Head title="Empréstimos — Recursos"/>
       <AdminLayout title="Recursos">
-        <div className="space-y-5">
+        <div className="p-4 md:p-6 space-y-5">
           {/* Alerta atrasos */}
           {overdue.length > 0 && (
             <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">

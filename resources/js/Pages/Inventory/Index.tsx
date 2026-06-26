@@ -252,7 +252,7 @@ export default function InventoryIndex({ items, categories, suppliers, subcatego
     <>
       <Head title="Catálogo de Recursos"/>
       <AdminLayout title="Recursos">
-        <div className="space-y-4">
+        <div className="p-4 md:p-6 space-y-4">
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
@@ -307,12 +307,12 @@ export default function InventoryIndex({ items, categories, suppliers, subcatego
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Material</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Tipo / Categoria</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Fornecedor</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden xl:table-cell">Localização</th>
-                  <th className="px-4 py-3"/>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Material</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Tipo / Categoria</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Fornecedor</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden xl:table-cell">Localização</th>
+                  <th className="px-4 py-3.5"/>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -321,24 +321,24 @@ export default function InventoryIndex({ items, categories, suppliers, subcatego
                 )}
                 {items.data?.map((item: Item) => (
                   <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-4">
                       <p className="font-medium text-gray-800">{item.name}</p>
                       {(item.reference || item.barcode) && (
                         <p className="text-xs text-gray-400">{[item.reference, item.barcode].filter(Boolean).join(' · ')}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
+                    <td className="px-4 py-4 hidden md:table-cell">
                       <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium', TYPE_COLORS[item.item_type])}>
                         {TYPE_LABELS[item.item_type]}
                       </span>
                       <p className="text-xs text-gray-400 mt-0.5">{[item.category?.name, item.subcategory].filter(Boolean).join(' › ') || '—'}</p>
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
+                    <td className="px-4 py-4 hidden lg:table-cell">
                       {item.supplier
                         ? <span className="flex items-center gap-1 text-xs text-gray-600"><Truck size={11}/>{item.supplier.name}</span>
                         : <span className="text-xs text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-4">
                       <StockBadge item={item}/>
                       {item.max_stock && (
                         <div className="mt-1 h-1.5 w-20 bg-gray-100 rounded-full overflow-hidden">
@@ -347,8 +347,8 @@ export default function InventoryIndex({ items, categories, suppliers, subcatego
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 hidden xl:table-cell">{item.location || '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-4 text-xs text-gray-500 hidden xl:table-cell">{item.location || '—'}</td>
+                    <td className="px-4 py-4">
                       <div className="flex items-center gap-2 justify-end">
                         <button onClick={() => { setEditing(item); setShowForm(true) }}
                           className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700">

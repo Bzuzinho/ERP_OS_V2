@@ -239,7 +239,7 @@ export default function InventoryRequisitions({ pendingRequisitions, otherRequis
     <>
       <Head title="Requisições — Recursos"/>
       <AdminLayout title="Recursos">
-        <div className="space-y-5">
+        <div className="p-4 md:p-6 space-y-5">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-700">
               Requisições pendentes
