@@ -107,9 +107,9 @@ function AudioPlayer({ url, duration }: { url: string; duration?: number }) {
 
 // ─── Message Bubble ────────────────────────────────────────────────────────────
 function MessageBubble({
-  msg, isMine, showName, onReply, onDelete, onCreateTask, onCreateTicket
+  msg, isMine, showName, onReply, onDelete, onCreateTask, onCreateTicket, othersReadAt, isAdmin
 }: {
-  msg: Msg; isMine: boolean; showName: boolean;
+  msg: Msg; isMine: boolean; showName: boolean; othersReadAt: string | null; isAdmin: boolean;
   onReply: (m: Msg) => void; onDelete: (m: Msg) => void;
   onCreateTask: (m: Msg) => void; onCreateTicket: (m: Msg) => void;
 }) {
@@ -220,12 +220,23 @@ function MessageBubble({
             </>
           )}
 
-          {/* Timestamp */}
+          {/* Timestamp + read receipt */}
           <div className={clsx('text-[10px] mt-0.5 text-right flex items-center justify-end gap-1',
             isMine ? 'text-indigo-200' : 'text-gray-400')}>
             {msg.is_edited && <span>editado</span>}
             {timeStr(msg.created_at)}
-            {isMine && <CheckCheck size={11}/>}
+            {isMine && (() => {
+              const isRead = othersReadAt
+                ? new Date(msg.created_at) <= new Date(othersReadAt)
+                : false
+              return (
+                <CheckCheck
+                  size={11}
+                  className={isRead ? 'text-sky-300' : 'text-indigo-300/60'}
+                  title={isRead ? 'Visto' : 'Enviado'}
+                />
+              )
+            })()}
           </div>
         </div>
 
@@ -261,7 +272,7 @@ function MessageBubble({
                       </button>
                     </>
                   )}
-                  {isMine && (
+                  {(isMine || isAdmin) && (
                     <button onClick={() => { onDelete(msg); setMenu(false) }}
                       className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
                       <Trash2 size={14}/> Apagar
@@ -474,13 +485,18 @@ export default function ChatIndex({
   activeId,
   activeConversation,
   messages: initMessages = [],
+  isAdmin: initIsAdmin = false,
+  othersReadAt: initOthersReadAt = null,
 }: any) {
   const { props } = usePage()
   const authUser = (props as any).auth?.user
 
+  const isAdmin = initIsAdmin || authUser?.role === 'admin'
+
   const [convs, setConvs] = useState<Conv[]>(initConvs)
   const [messages, setMessages] = useState<Msg[]>(initMessages)
   const [active, setActive] = useState<Conv | null>(activeConversation ?? null)
+  const [othersReadAt, setOthersReadAt] = useState<string | null>(initOthersReadAt)
   const [body, setBody] = useState('')
   const [replyTo, setReplyTo] = useState<Msg | null>(null)
 
@@ -530,6 +546,14 @@ export default function ChatIndex({
         const res = await axios.get(`/chat/${convId}/poll`, {
           params: { since: lastMsgTimeRef.current }
         })
+        // Actualizar read receipts independentemente de novas mensagens
+        if (res.data.others_read_at) {
+          setOthersReadAt(prev =>
+            !prev || new Date(res.data.others_read_at) > new Date(prev)
+              ? res.data.others_read_at
+              : prev
+          )
+        }
         if (res.data.messages.length > 0) {
           setMessages(prev => {
             const ids = new Set(prev.map((m: Msg) => m.id))
@@ -570,8 +594,8 @@ export default function ChatIndex({
     setActive(conv)
     setSidebarOpen(false)
     setMessages([])
+    setOthersReadAt(null)
     lastMsgTimeRef.current = null
-    // Visita completa para garantir que conversations, messages e activeConversation são todos actualizados
     router.visit(`/chat/${conv.id}`, { preserveScroll: false })
   }
 
@@ -666,9 +690,10 @@ export default function ChatIndex({
     setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, deleted_at: new Date().toISOString() } : m))
   }
 
-  function deleteGroup() {
-    if (!active || active.type !== 'group') return
-    if (!confirm(`Tens a certeza que queres apagar o grupo "${active.name}"? Esta acção é irreversível.`)) return
+  function deleteConversation() {
+    if (!active) return
+    const label = active.type === 'group' ? `o grupo "${active.name}"` : `a conversa com "${active.name}"`
+    if (!confirm(`Tens a certeza que queres apagar ${label}? Esta acção é irreversível.`)) return
     router.delete(`/chat/${active.id}`)
   }
 
@@ -826,10 +851,10 @@ export default function ChatIndex({
                     </div>
                   )}
                 </div>
-                {active.type === 'group' && ['admin', 'gestor'].includes(authUser?.role) && (
+                {isAdmin && (
                   <button
-                    onClick={deleteGroup}
-                    title="Apagar grupo"
+                    onClick={deleteConversation}
+                    title="Apagar conversa"
                     className="ml-2 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <Trash2 size={16}/>
@@ -858,6 +883,8 @@ export default function ChatIndex({
                           msg={msg}
                           isMine={isMine}
                           showName={showName}
+                          othersReadAt={othersReadAt}
+                          isAdmin={isAdmin}
                           onReply={setReplyTo}
                           onDelete={deleteMessage}
                           onCreateTask={msg => setActionModal({ type: 'task', msg })}

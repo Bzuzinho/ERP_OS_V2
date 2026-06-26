@@ -101,6 +101,13 @@ class ConversationController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
+        // last_read_at dos outros participantes (para read receipts)
+        $othersReadAt = $isParticipant
+            ? $conversation->participantRecords()
+                ->where('user_id', '!=', $userId)
+                ->max('last_read_at')
+            : null;
+
         return Inertia::render('Chat/Index', [
             'conversations'      => $conversations,
             'users'              => $users,
@@ -108,6 +115,7 @@ class ConversationController extends Controller
             'activeConversation' => $this->formatConversation($conversation->load('participants', 'participantRecords'), $userId, $isAdmin),
             'messages'           => $messages,
             'isAdmin'            => $isAdmin,
+            'othersReadAt'       => $othersReadAt,
         ]);
     }
 
@@ -203,19 +211,21 @@ class ConversationController extends Controller
         return back()->with('message', 'Grupo actualizado.');
     }
 
-    // ── Apagar grupo ──────────────────────────────────────────────────────────
+    // ── Apagar conversa (qualquer tipo para admin da app) ────────────────────
     public function destroy(Conversation $conversation)
     {
-        abort_unless($conversation->type === 'group', 400);
+        $userId  = Auth::id();
+        $appAdmin = Auth::user()->role === 'admin';
 
-        // Só o criador ou admins da conversa podem apagar
-        $userId = Auth::id();
-        $isAdmin = $conversation->participantRecords()
-            ->where('user_id', $userId)
-            ->where('is_admin', true)
-            ->exists();
-
-        abort_unless($isAdmin || $conversation->created_by === $userId, 403);
+        if (!$appAdmin) {
+            // Não-admins só podem apagar grupos onde são admin da conversa
+            abort_unless($conversation->type === 'group', 403);
+            $isConvAdmin = $conversation->participantRecords()
+                ->where('user_id', $userId)
+                ->where('is_admin', true)
+                ->exists();
+            abort_unless($isConvAdmin || $conversation->created_by === $userId, 403);
+        }
 
         // Apagar anexos do storage
         foreach ($conversation->messages as $msg) {
@@ -452,16 +462,25 @@ class ConversationController extends Controller
                 ->update(['last_read_at' => now()]);
         }
 
+        $othersReadAt = $isParticipant
+            ? $conversation->participantRecords()
+                ->where('user_id', '!=', $userId)
+                ->max('last_read_at')
+            : null;
+
         return response()->json([
-            'messages' => $messages,
-            'unread'   => $user->unreadMessagesCount(),
+            'messages'       => $messages,
+            'unread'         => $user->unreadMessagesCount(),
+            'others_read_at' => $othersReadAt,
         ]);
     }
 
     // ── Apagar mensagem ───────────────────────────────────────────────────────
     public function destroyMessage(Conversation $conversation, Message $message)
     {
-        abort_unless($message->user_id === Auth::id(), 403);
+        $user = Auth::user();
+        // Autor pode sempre apagar a sua mensagem; admin pode apagar qualquer uma
+        abort_unless($message->user_id === $user->id || $user->role === 'admin', 403);
         $message->delete();
         return response()->json(['ok' => true]);
     }
