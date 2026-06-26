@@ -66,7 +66,9 @@ class Contact extends Model
 
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar ? asset('storage/' . $this->avatar) : null;
+        return $this->avatar
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->avatar)
+            : null;
     }
 
     public function getInitialsAttribute(): string
