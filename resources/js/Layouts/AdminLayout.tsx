@@ -487,7 +487,7 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
   )
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--page-bg)' }}>
+    <div className="flex overflow-hidden safe-top safe-bottom" style={{ backgroundColor: 'var(--page-bg)', height: '100dvh' }}>
 
       {/* Desktop sidebar */}
       <div className={clsx('hidden md:flex flex-col relative flex-shrink-0', collapsed ? 'w-16' : 'w-60')}>
@@ -513,7 +513,7 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden" style={{ maxWidth: '100vw' }}>
         {/* Top bar */}
         <header
-          className="h-14 border-b border-black/10 flex items-center justify-between px-4 flex-shrink-0 min-w-0 max-w-full"
+          className="h-14 border-b border-black/10 flex items-center justify-between px-4 flex-shrink-0 min-w-0 max-w-full safe-right"
           style={{ backgroundColor: 'var(--header-bg)' }}
         >
           <div className="flex items-center gap-3">

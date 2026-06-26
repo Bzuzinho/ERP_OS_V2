@@ -49,6 +49,12 @@
         $ps = $shades($t['primary']);
     @endphp
     <style>
+        /* Safe area para iOS PWA standalone */
+        html, body { height: 100%; }
+        .safe-top    { padding-top:    env(safe-area-inset-top);    }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .safe-right  { padding-right:  env(safe-area-inset-right);  }
+        .safe-left   { padding-left:   env(safe-area-inset-left);   }
         :root {
             /* Sombras do primary (usadas pelo Tailwind via var(--p-*)) */
             --p-50:{{ $ps[50] }};--p-100:{{ $ps[100] }};--p-200:{{ $ps[200] }};
