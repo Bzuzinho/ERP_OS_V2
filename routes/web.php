@@ -208,6 +208,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/chat/{conversation}',                                       [ConversationController::class, 'update'])->name('chat.update');
     Route::delete('/chat/{conversation}',                                      [ConversationController::class, 'destroy'])->name('chat.destroy');
     Route::post('/chat/{conversation}/mensagens',                              [ConversationController::class, 'sendMessage'])->name('chat.messages.store');
+    Route::post('/chat/{conversation}/messages',                               [ConversationController::class, 'sendMessage']);
+    Route::delete('/chat/{conversation}/messages/{message}',                   [ConversationController::class, 'destroyMessage']);
+    Route::post('/chat/{conversation}/messages/{message}/task',                [ConversationController::class, 'messageToTask']);
+    Route::post('/chat/{conversation}/messages/{message}/ticket',              [ConversationController::class, 'messageToTicket']);
     Route::get('/chat/{conversation}/poll',                                    [ConversationController::class, 'poll'])->name('chat.poll');
     Route::delete('/chat/{conversation}/mensagens/{message}',                  [ConversationController::class, 'destroyMessage'])->name('chat.messages.destroy');
     Route::post('/chat/{conversation}/mensagens/{message}/tarefa',             [ConversationController::class, 'messageToTask'])->name('chat.messages.task');
