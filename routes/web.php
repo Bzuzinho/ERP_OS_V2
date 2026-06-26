@@ -254,64 +254,65 @@ Route::middleware('auth')->group(function () {
     Route::get('/debug/fix-users',                                             function () {
         $log = [];
         $currentId = auth()->id();
+        $DB = \Illuminate\Support\Facades\DB::class;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use (&$log, $currentId) {
-            // 1. Para cada user sem contact_id, procurar contacto pelo email
-            foreach (\App\Models\User::whereNull('contact_id')->get() as $u) {
-                $contact = \App\Models\Contact::where('email', $u->email)->first();
+        try {
+            // PASSO 1: ligar users sem contact_id ao contacto com o mesmo email
+            $orphans = $DB::table('users')->whereNull('contact_id')->get();
+            foreach ($orphans as $u) {
+                $contact = $DB::table('contacts')->where('email', $u->email)->first();
                 if ($contact) {
-                    // Ligar ao contacto existente
-                    \App\Models\User::where('id', $u->id)->update(['contact_id' => $contact->id]);
-                    $log[] = "✓ Ligado user #{$u->id} ({$u->name}) ao contact #{$contact->id}";
+                    $DB::table('users')->where('id', $u->id)->update(['contact_id' => $contact->id]);
+                    $log[] = "✓ user#{$u->id} ({$u->email}) → contact#{$contact->id}";
                 } else {
-                    // Criar contacto para este utilizador (para não ficar órfão)
-                    $contact = \App\Models\Contact::create([
+                    // Criar contacto mínimo
+                    $cid = $DB::table('contacts')->insertGetId([
                         'organization_id' => 1,
                         'name'            => $u->name,
                         'email'           => $u->email,
-                        'person_type_id'  => \App\Models\PersonType::first()?->id,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
                     ]);
-                    \App\Models\User::where('id', $u->id)->update(['contact_id' => $contact->id]);
-                    $log[] = "✓ Criado contacto #{$contact->id} para user #{$u->id} ({$u->name})";
+                    $DB::table('users')->where('id', $u->id)->update(['contact_id' => $cid]);
+                    $log[] = "✓ criado contact#{$cid} para user#{$u->id} ({$u->name})";
                 }
             }
 
-            // 2. Detectar duplicados: vários users com o mesmo contact_id
-            $dupes = \App\Models\User::selectRaw('contact_id, MIN(id) as keep_id, COUNT(*) as cnt')
-                ->whereNotNull('contact_id')
-                ->groupBy('contact_id')
-                ->having('cnt', '>', 1)
-                ->get();
-
+            // PASSO 2: detectar contact_id duplicados → manter o user actual ou o de menor id
+            $dupes = $DB::select("
+                SELECT contact_id, MIN(id) as keep_id, COUNT(*) as cnt
+                FROM users
+                WHERE contact_id IS NOT NULL AND is_active = 1
+                GROUP BY contact_id HAVING cnt > 1
+            ");
             foreach ($dupes as $d) {
-                // Manter o que está actualmente autenticado, ou o de menor id
-                $keepId = $currentId;
-                $keep = \App\Models\User::where('contact_id', $d->contact_id)->find($keepId);
-                if (!$keep) {
-                    $keepId = $d->keep_id;
-                }
+                // Se o user actual tem este contact_id, é ele que fica
+                $keepId = $DB::table('users')
+                    ->where('contact_id', $d->contact_id)
+                    ->where('id', $currentId)->exists() ? $currentId : $d->keep_id;
 
-                $toMerge = \App\Models\User::where('contact_id', $d->contact_id)
-                    ->where('id', '!=', $keepId)->get();
+                $toMerge = $DB::table('users')
+                    ->where('contact_id', $d->contact_id)
+                    ->where('id', '!=', $keepId)->pluck('id');
 
-                foreach ($toMerge as $u) {
-                    // Migrar tudo para o utilizador a manter
-                    \Illuminate\Support\Facades\DB::table('conversation_participants')
-                        ->where('user_id', $u->id)->update(['user_id' => $keepId]);
-                    \Illuminate\Support\Facades\DB::table('messages')
-                        ->where('user_id', $u->id)->update(['user_id' => $keepId]);
-                    \App\Models\PushSubscription::where('user_id', $u->id)
-                        ->update(['user_id' => $keepId]);
-                    // Desactivar o duplicado
-                    \App\Models\User::where('id', $u->id)->update(['is_active' => false]);
-                    $log[] = "⚠ Duplicado: user #{$u->id} ({$u->name}/{$u->email}) mesclado em #{$keepId} e desactivado";
+                foreach ($toMerge as $uid) {
+                    $uName = $DB::table('users')->where('id', $uid)->value('name');
+                    $DB::table('conversation_participants')->where('user_id', $uid)->update(['user_id' => $keepId]);
+                    $DB::table('messages')->where('user_id', $uid)->update(['user_id' => $keepId]);
+                    $DB::table('push_subscriptions')->where('user_id', $uid)->update(['user_id' => $keepId]);
+                    $DB::table('notification_recipients')->where('user_id', $uid)->update(['user_id' => $keepId]);
+                    $DB::table('users')->where('id', $uid)->update(['is_active' => false, 'contact_id' => null]);
+                    $log[] = "⚠ duplicado: user#{$uid} ({$uName}) → migrado para user#{$keepId} e desactivado";
                 }
             }
-        });
 
-        $after = \App\Models\User::orderBy('id')
-            ->get(['id', 'name', 'email', 'role', 'contact_id', 'is_active']);
-        return response()->json(['actions' => $log, 'users_after' => $after]);
+            $after = $DB::table('users')->orderBy('id')
+                ->get(['id', 'name', 'email', 'role', 'contact_id', 'is_active']);
+            return response()->json(['ok' => true, 'actions' => $log, 'users' => $after]);
+
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage(), 'actions_so_far' => $log], 500);
+        }
     });
     Route::get('/debug/push-test',                                             function () {
         $user = auth()->user();
