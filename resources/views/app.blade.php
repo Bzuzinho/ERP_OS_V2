@@ -8,11 +8,17 @@
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
     @inertiaHead
     {{-- PWA --}}
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/pwa-manifest">
+    @php
+        $pwaIcon = $org?->logo
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($org->logo)
+            : '/icons/icon-192.png';
+    @endphp
+    <link rel="apple-touch-icon" href="{{ $pwaIcon }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="JuntaOS">
+    <meta name="apple-mobile-web-app-title" content="{{ $org?->name ?? 'JuntaOS' }}">
     {{-- Tema dinamico da organizacao --}}
     @php
         $org = \App\Models\Organization::find(1);

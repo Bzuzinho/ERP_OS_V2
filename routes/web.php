@@ -30,6 +30,38 @@ Route::get('/login',   [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login',  [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Manifesto PWA dinâmico (sem auth — chamado pelo browser antes do login)
+Route::get('/pwa-manifest', function () {
+    $org  = \App\Models\Organization::find(1);
+    $name = $org?->name ?? 'JuntaOS';
+
+    $logoUrl = $org?->logo
+        ? \Illuminate\Support\Facades\Storage::disk('public')->url($org->logo)
+        : url('/icons/icon-192.png');
+
+    $icons = [
+        ['src' => $logoUrl,             'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any maskable'],
+        ['src' => url('/icons/icon-192.png'), 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any maskable'],
+        ['src' => url('/icons/icon-144.png'), 'sizes' => '144x144', 'type' => 'image/png', 'purpose' => 'any maskable'],
+    ];
+
+    return response()->json([
+        'name'             => $name,
+        'short_name'       => $name,
+        'description'      => 'Sistema de gestão para juntas de freguesia',
+        'start_url'        => '/',
+        'display'          => 'standalone',
+        'background_color' => $org?->sidebar_color ?? '#0f172a',
+        'theme_color'      => $org?->primary_color ?? '#4f46e5',
+        'orientation'      => 'portrait-primary',
+        'icons'            => $icons,
+        'shortcuts'        => [
+            ['name' => 'Chat',    'url' => '/chat',    'icons' => [['src' => url('/icons/icon-96.png'), 'sizes' => '96x96']]],
+            ['name' => 'Tarefas', 'url' => '/tarefas', 'icons' => [['src' => url('/icons/icon-96.png'), 'sizes' => '96x96']]],
+        ],
+    ], 200, ['Content-Type' => 'application/manifest+json']);
+});
+
 // Rotas protegidas
 Route::middleware('auth')->group(function () {
 
