@@ -251,6 +251,46 @@ Route::middleware('auth')->group(function () {
             'conversations' => $convs,
         ]);
     });
+    // Limpar utilizadores seed: desactivar IDs 2,3,4,5 e migrar conversas
+    // User 2 (Administrador) → migrar para quem estiver autenticado
+    // User 5 (Ricardo duplicado) → migrar para user 1
+    // Users 3,4 (Maria/João seed) → só desactivar
+    Route::get('/debug/cleanup-seed-users',                                    function () {
+        $DB = \Illuminate\Support\Facades\DB::class;
+        $log = [];
+        $currentId = auth()->id();
+
+        try {
+            // User 5 → user 1 (dois Ricardos, manter o 1 que é o do iPhone)
+            foreach (['conversation_participants', 'messages', 'push_subscriptions', 'notification_recipients'] as $tbl) {
+                $n = $DB::table($tbl)->where('user_id', 5)->update(['user_id' => 1]);
+                if ($n) $log[] = "Migrado $n registo(s) de user#5→user#1 em $tbl";
+            }
+            $DB::table('users')->where('id', 5)->update(['is_active' => false]);
+            $log[] = "Desactivado user#5 (Ricardo duplicado)";
+
+            // User 2 (Administrador seed) → migrar para user actual ($currentId)
+            if ($currentId !== 2) {
+                foreach (['conversation_participants', 'messages', 'push_subscriptions', 'notification_recipients'] as $tbl) {
+                    $n = $DB::table($tbl)->where('user_id', 2)->update(['user_id' => $currentId]);
+                    if ($n) $log[] = "Migrado $n registo(s) de user#2→user#$currentId em $tbl";
+                }
+                $DB::table('users')->where('id', 2)->update(['is_active' => false]);
+                $log[] = "Desactivado user#2 (Administrador seed) → conversas migradas para user#$currentId";
+            }
+
+            // Users 3 e 4 → desactivar sem migrar (não têm conversas reais)
+            $DB::table('users')->whereIn('id', [3, 4])->update(['is_active' => false]);
+            $log[] = "Desactivados users#3 e #4 (seed Maria/João sem conversas)";
+
+            $after = $DB::table('users')->orderBy('id')
+                ->get(['id', 'name', 'email', 'role', 'is_active']);
+            return response()->json(['ok' => true, 'actions' => $log, 'users' => $after]);
+
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage(), 'actions' => $log], 500);
+        }
+    });
     Route::get('/debug/fix-users',                                             function () {
         $log = [];
         $currentId = auth()->id();
