@@ -188,6 +188,9 @@ Route::middleware('auth')->group(function () {
     // Documentos
     Route::get('/documentos',                                       [DocumentController::class, 'index'])->name('documents.index');
     Route::post('/documentos',                                      [DocumentController::class, 'store'])->name('documents.store');
+    Route::get('/documentos/{document}',                            [DocumentController::class, 'show'])->name('documents.show');
+    Route::post('/documentos/{document}',                           [DocumentController::class, 'update'])->name('documents.update');
+    Route::get('/documentos/{document}/download',                   [DocumentController::class, 'download'])->name('documents.download');
     Route::post('/documentos/{document}/aprovar',                   [DocumentController::class, 'approve'])->name('documents.approve');
     Route::delete('/documentos/{document}',                         [DocumentController::class, 'destroy'])->name('documents.destroy');
 

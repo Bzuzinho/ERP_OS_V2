@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class DocumentController extends Controller
@@ -16,7 +17,7 @@ class DocumentController extends Controller
         if ($request->filled('search'))     $query->where('title', 'like', "%{$request->search}%");
 
         return Inertia::render('Documents/Index', [
-            'documents' => $query->paginate(20)->withQueryString(),
+            'documents' => $query->paginate(30)->withQueryString(),
             'filters'   => $request->only(['type','visibility','search']),
         ]);
     }
@@ -29,11 +30,67 @@ class DocumentController extends Controller
             'type'         => 'required|in:documento,ata,regulamento,formulário,outro',
             'visibility'   => 'required|in:público,interno,restrito',
             'meeting_date' => 'nullable|date',
+            'file'         => 'nullable|file|max:51200', // 50 MB
         ]);
+
         $data['organization_id'] = 1;
         $data['created_by']      = auth()->id();
-        Document::create($data);
-        return back()->with('message', 'Documento criado.');
+
+        if ($request->hasFile('file')) {
+            $file                  = $request->file('file');
+            $path                  = $file->store('documentos', 'public');
+            $data['filename']      = $path;
+            $data['original_name'] = $file->getClientOriginalName();
+            $data['mime_type']     = $file->getMimeType();
+            $data['file_size']     = $file->getSize();
+        }
+
+        unset($data['file']);
+        $doc = Document::create($data);
+        return redirect("/documentos/{$doc->id}")->with('message', 'Documento criado.');
+    }
+
+    public function show(Document $document)
+    {
+        $document->load(['creator','approver']);
+        return Inertia::render('Documents/Show', ['document' => $document]);
+    }
+
+    public function update(Request $request, Document $document)
+    {
+        $data = $request->validate([
+            'title'        => 'required|string|max:255',
+            'description'  => 'nullable|string',
+            'type'         => 'required|in:documento,ata,regulamento,formulário,outro',
+            'visibility'   => 'required|in:público,interno,restrito',
+            'meeting_date' => 'nullable|date',
+            'file'         => 'nullable|file|max:51200',
+        ]);
+
+        if ($request->hasFile('file')) {
+            // delete old file
+            if ($document->filename) {
+                Storage::disk('public')->delete($document->filename);
+            }
+            $file                  = $request->file('file');
+            $path                  = $file->store('documentos', 'public');
+            $data['filename']      = $path;
+            $data['original_name'] = $file->getClientOriginalName();
+            $data['mime_type']     = $file->getMimeType();
+            $data['file_size']     = $file->getSize();
+        }
+
+        unset($data['file']);
+        $document->update($data);
+        return redirect("/documentos/{$document->id}")->with('message', 'Documento atualizado.');
+    }
+
+    public function download(Document $document)
+    {
+        if (!$document->filename || !Storage::disk('public')->exists($document->filename)) {
+            abort(404, 'Ficheiro não encontrado.');
+        }
+        return Storage::disk('public')->download($document->filename, $document->original_name ?? 'documento');
     }
 
     public function approve(Document $document)
@@ -48,8 +105,11 @@ class DocumentController extends Controller
 
     public function destroy(Document $document)
     {
+        if ($document->filename) {
+            Storage::disk('public')->delete($document->filename);
+        }
         $document->delete();
-        return back()->with('message', 'Documento removido.');
+        return redirect('/documentos')->with('message', 'Documento removido.');
     }
 
     // ── Atas ──────────────────────────────────────────────────────────────
