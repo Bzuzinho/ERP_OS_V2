@@ -1,7 +1,7 @@
 import React from 'react'
 import { Head, Link, router } from '@inertiajs/react'
 import AdminLayout from '@/Layouts/AdminLayout'
-import { FileText, CheckSquare, Calendar, AlertTriangle, ChevronRight, Clock, Bell, Check, X } from 'lucide-react'
+import { FileText, CheckSquare, Calendar, AlertTriangle, ChevronRight, Clock, Bell, Check, X, LayoutList, User } from 'lucide-react'
 import clsx from 'clsx'
 
 const statusColors: Record<string, string> = {
@@ -57,9 +57,32 @@ function StatCard({ label, value, sub, icon: Icon, color, href }: any) {
   return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">{inner}</div>
 }
 
+const PLAN_STATUS: Record<string, { label: string; cls: string }> = {
+  rascunho:    { label: 'Rascunho',    cls: 'bg-gray-100 text-gray-500' },
+  pendente:    { label: 'Pendente',    cls: 'bg-yellow-100 text-yellow-700' },
+  aprovado:    { label: 'Aprovado',    cls: 'bg-blue-100 text-blue-700' },
+  'em_execução':{ label: 'Em execução', cls: 'bg-indigo-100 text-indigo-700' },
+  'concluído': { label: 'Concluído',   cls: 'bg-green-100 text-green-700' },
+  cancelado:   { label: 'Cancelado',   cls: 'bg-red-100 text-red-600' },
+}
+
+function ProgressBar({ value }: { value: number }) {
+  const pct = Math.min(100, Math.max(0, value))
+  const color = pct === 100 ? 'bg-green-500' : pct >= 60 ? 'bg-primary-500' : pct >= 30 ? 'bg-amber-400' : 'bg-red-400'
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden min-w-[60px]">
+        <div className={clsx('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs tabular-nums text-gray-500 w-8 text-right">{pct}%</span>
+    </div>
+  )
+}
+
 export default function Dashboard({
   stats = {}, recentTickets = [], upcomingEvents = [],
   pendingReservations = [], pendingAbsences = [], canApproveAbsences = false,
+  activePlans = [],
 }: any) {
 
   function approve(id: number) {
@@ -75,11 +98,12 @@ export default function Dashboard({
       <div className="p-4 md:p-6 space-y-8">
 
         {/* Stats */}
-        <div className={clsx('grid gap-4 grid-cols-1 sm:grid-cols-2', canApproveAbsences ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
+        <div className={clsx('grid gap-4 grid-cols-1 sm:grid-cols-2', canApproveAbsences ? 'lg:grid-cols-6' : 'lg:grid-cols-5')}>
           <StatCard label="Pedidos abertos"    value={stats.tickets?.aberto ?? 0}       sub={`${stats.tickets?.total ?? 0} total`}            icon={FileText}      color="text-blue-600"    href="/pedidos" />
           <StatCard label="Tarefas pendentes"  value={stats.tasks?.pending ?? 0}         sub={`${stats.tasks?.total ?? 0} total`}              icon={CheckSquare}   color="text-indigo-600"  href="/tarefas" />
           <StatCard label="Reservas pendentes" value={stats.reservations?.pendente ?? 0} sub={`${stats.reservations?.aprovada ?? 0} aprovadas`} icon={Calendar}     color="text-emerald-600" href="/reservas" />
           <StatCard label="Stock baixo"        value={stats.inventory?.low_stock ?? 0}   sub="itens abaixo do mínimo"                           icon={AlertTriangle} color="text-amber-600"   href="/inventario" />
+          <StatCard label="Planos activos"     value={(stats.plans?.em_execucao ?? 0) + (stats.plans?.aprovado ?? 0)} sub={`${stats.plans?.concluido ?? 0} concluídos`} icon={LayoutList} color="text-violet-600" href="/planeamento" />
           {canApproveAbsences && (
             <StatCard label="Aprovações Pendentes" value={pendingAbsences.length} sub="ausências de RH" icon={Bell} color="text-orange-600" href="#aprovacoes-pendentes" />
           )}
@@ -136,6 +160,98 @@ export default function Dashboard({
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Active Plans */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <LayoutList size={16} className="text-violet-500" />
+              <h2 className="font-semibold text-gray-800">Planeamento Operacional</h2>
+              <span className="text-xs text-gray-400">planos em execução e aprovados</span>
+            </div>
+            <Link href="/planeamento" className="text-sm text-primary-600 hover:underline flex items-center gap-1">
+              Ver todos <ChevronRight size={14}/>
+            </Link>
+          </div>
+
+          {activePlans.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <LayoutList size={32} className="mx-auto mb-2 text-gray-200" />
+              <p className="text-sm text-gray-400">Sem planos activos.</p>
+              <Link href="/planeamento" className="text-sm text-primary-600 hover:underline mt-1 inline-block">
+                Criar plano
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plano</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Área</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Progresso</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Prazo</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Responsável</th>
+                    <th className="px-4 py-3 w-6" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {activePlans.map((p: any) => {
+                    const st = PLAN_STATUS[p.status] ?? { label: p.status, cls: 'bg-gray-100 text-gray-500' }
+                    const isOverdue = p.planned_end && new Date(p.planned_end) < new Date() && p.status !== 'concluído'
+                    return (
+                      <tr key={p.id}
+                        onClick={() => router.visit(`/planeamento/${p.id}`)}
+                        className="hover:bg-gray-50 transition-colors cursor-pointer group">
+                        <td className="px-5 py-3.5">
+                          <p className="font-medium text-gray-800 truncate max-w-[180px] md:max-w-xs">{p.title}</p>
+                          {p.tasks_total > 0 && (
+                            <p className="text-[11px] text-gray-400 mt-0.5">
+                              {p.tasks_done}/{p.tasks_total} tarefas
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 hidden sm:table-cell">
+                          {p.service_area
+                            ? <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{p.service_area}</span>
+                            : <span className="text-xs text-gray-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap', st.cls)}>
+                            {st.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 min-w-[130px]">
+                          <ProgressBar value={p.progress} />
+                        </td>
+                        <td className="px-4 py-3.5 hidden md:table-cell">
+                          {p.planned_end ? (
+                            <span className={clsx('text-xs whitespace-nowrap', isOverdue ? 'text-red-600 font-medium' : 'text-gray-500')}>
+                              {isOverdue && '⚠ '}
+                              {new Date(p.planned_end).toLocaleDateString('pt-PT')}
+                            </span>
+                          ) : <span className="text-gray-300 text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                          {p.manager ? (
+                            <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                              <User size={12} className="text-gray-300"/>
+                              {p.manager}
+                            </span>
+                          ) : <span className="text-gray-300 text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-3.5 text-gray-300 group-hover:text-gray-400 transition-colors">
+                          <ChevronRight size={15}/>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Pending Reservations */}
