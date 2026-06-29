@@ -164,7 +164,7 @@ class DocumentController extends Controller
             'message'         => "O documento \"{$document->title}\" aguarda a sua aprovação." .
                                  ($request->notes ? " Nota: {$request->notes}" : ''),
             'action_url'      => "/documentos/{$document->id}",
-            'priority'        => 'high',
+            'priority'        => 'alta',
         ]);
 
         foreach ($request->user_ids as $userId) {
