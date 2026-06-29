@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { Head, Link, router, useForm } from '@inertiajs/react'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react'
 import AdminLayout from '@/Layouts/AdminLayout'
 import {
   ArrowLeft, Mail, Phone, Smartphone, MapPin, FileText, Edit3, Edit2,
@@ -199,17 +199,28 @@ export default function PessoasShow({ contact, personTypes, departments }: any) 
 
   function confirmDelete() {
     if (confirm(`Eliminar "${contact.name}"? Esta ação não pode ser desfeita.`)) {
-      router.delete(`/pessoas/${contact.id}`)
+      router.delete(`/pessoas/${contact.id}`, {
+        onError: (errors) => alert(errors.error ?? 'Não foi possível eliminar esta pessoa.'),
+      })
     }
   }
 
   const isEmployee = !!(contact.hire_date || contact.position || contact.employee_number)
   const [showEmployeeFields, setShowEmployeeFields] = useState(isEmployee)
+  const { errors } = usePage().props as any
 
   return (
     <AdminLayout title={contact.name}>
       <Head title={`${contact.name} — JuntaOS`}/>
       <div className="p-4 md:p-6 space-y-5">
+
+        {/* Erro de operação (ex: tentativa de apagar com conta activa) */}
+        {errors?.error && (
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+            <AlertTriangle size={16} className="flex-shrink-0 mt-0.5"/>
+            <p>{errors.error}</p>
+          </div>
+        )}
 
         {/* Cabeçalho */}
         <div className="flex items-start gap-3">
