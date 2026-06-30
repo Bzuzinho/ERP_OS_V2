@@ -5,7 +5,7 @@ import {
   ChevronRight, Globe, Lock, CheckCircle2, AlertTriangle,
   ArrowRightLeft, ClipboardList, Paperclip, X, Upload,
   FileText, Trash2, Edit2, UserCheck, MessageSquare,
-  StickyNote, AlertCircle, RefreshCw, CheckSquare,
+  StickyNote, AlertCircle, RefreshCw, CheckSquare, Pencil,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -171,7 +171,15 @@ export default function TicketShow({ ticket, users, serviceAreas, teams, contact
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-mono text-primary-600 mb-1">{ticket.reference}</p>
+              <div className="flex items-center gap-3 mb-1">
+                <p className="text-xs font-mono text-primary-600">{ticket.reference}</p>
+                {!isClosed && (
+                  <a href={`/pedidos/${ticket.id}/edit`}
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-primary-600 border border-gray-200 hover:border-primary-300 rounded-lg px-2.5 py-1 transition-colors">
+                    <Pencil size={11}/> Editar
+                  </a>
+                )}
+              </div>
               <h1 className="text-xl font-bold text-gray-900 mb-3">{ticket.title}</h1>
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className={clsx('px-2.5 py-0.5 rounded-full text-xs font-medium border', statusColors[ticket.status])}>

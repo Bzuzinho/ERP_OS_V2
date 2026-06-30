@@ -120,6 +120,17 @@ class TicketController extends Controller
         ]);
     }
 
+    public function edit(Ticket $ticket)
+    {
+        return Inertia::render('Tickets/Edit', [
+            'ticket'       => $ticket->load(['contact','serviceArea','assignee','teams']),
+            'contacts'     => \App\Models\Contact::orderBy('name')->get(['id','name','email']),
+            'serviceAreas' => ServiceArea::where('is_active', true)->get(['id','name']),
+            'users'        => User::where('is_active', true)->orderBy('name')->get(['id','name']),
+            'teams'        => Team::where('is_active', true)->orderBy('name')->get(['id','name']),
+        ]);
+    }
+
     public function update(Request $request, Ticket $ticket)
     {
         $data = $request->validate([
@@ -128,7 +139,10 @@ class TicketController extends Controller
             'description'     => 'nullable|string',
             'status'          => 'sometimes|string',
             'priority'        => 'sometimes|in:baixa,normal,alta,urgente',
+            'origin'          => 'sometimes|in:portal,presencial,telefone,email,interno',
+            'ticket_type'     => 'sometimes|in:interno,externo',
             'assigned_to'     => 'nullable|exists:users,id',
+            'contact_id'      => 'nullable|exists:contacts,id',
             'service_area_id' => 'nullable|exists:service_areas,id',
             'team_id'         => 'nullable|exists:teams,id',
             'note'            => 'nullable|string',

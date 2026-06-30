@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/pedidos/novo',                                     [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/pedidos',                                         [TicketController::class, 'store'])->name('tickets.store');
     Route::get('/pedidos/{ticket}',                                 [TicketController::class, 'show'])->name('tickets.show');
+    Route::get('/pedidos/{ticket}/edit',                            [TicketController::class, 'edit'])->name('tickets.edit');
     Route::patch('/pedidos/{ticket}',                               [TicketController::class, 'update'])->name('tickets.update');
     Route::post('/pedidos/{ticket}/comentarios',                    [TicketController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/pedidos/{ticket}/encaminhar',                     [TicketController::class, 'route'])->name('tickets.route');

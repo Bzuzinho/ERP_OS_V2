@@ -179,7 +179,7 @@ class TaskController extends Controller
             $task->createNextOccurrence();
         }
 
-        return back()->with('message', 'Tarefa atualizada.');
+        return redirect("/tarefas/{$task->id}")->with('message', 'Tarefa atualizada.');
     }
 
     // ─── Checklist ────────────────────────────────────────────────────────────

@@ -30,7 +30,7 @@ class ReservationController extends Controller
     public function create()
     {
         return Inertia::render('Reservations/Create', [
-            'spaces'   => Space::where('is_active', true)->where('is_public', true)->get(),
+            'spaces'   => Space::where('is_active', true)->orderBy('name')->get(['id','name','location','capacity']),
             'contacts' => Contact::orderBy('name')->get(['id','name','email','type']),
         ]);
     }

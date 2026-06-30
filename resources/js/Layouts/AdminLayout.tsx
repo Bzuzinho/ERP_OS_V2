@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FileText, CheckSquare, CalendarDays,
   Users, Users2, Package, BookOpen, BarChart3, Settings,
   Bell, LogOut, Menu, X, ChevronLeft, ChevronRight, ClipboardList, MessageCircle,
-  ChevronDown, CheckCircle, AlertCircle, User, Plus, Check, XCircle, Clock,
+  ChevronDown, CheckCircle, AlertCircle, User, Plus, Check, XCircle, Clock, Building2,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -22,6 +22,7 @@ const NAV: NavItem[] = [
   { label: 'Pedidos',       href: '/pedidos',     icon: FileText,        group: ['/pedidos'] },
   { label: 'Tarefas',       href: '/tarefas',     icon: CheckSquare,     group: ['/tarefas'] },
   { label: 'Agenda',        href: '/agenda',      icon: CalendarDays,    group: ['/agenda', '/reservas', '/espacos'] },
+  { label: 'Reservas',      href: '/reservas',    icon: Building2,       group: ['/reservas', '/espacos'] },
   { label: 'Planeamento',   href: '/planeamento', icon: ClipboardList,   group: ['/planeamento'] },
   { label: 'Diretório',      href: '/pessoas',     icon: Users,           group: ['/pessoas', '/entidades', '/municipes', '/rh'] },
   { label: 'Equipas',        href: '/equipas',     icon: Users2,          group: ['/equipas'] },
@@ -32,7 +33,7 @@ const NAV: NavItem[] = [
   { label: 'Configurações', href: '/configuracoes', icon: Settings,      group: ['/configuracoes', '/perfil', '/configuracoes/utilizadores', '/configuracoes/permissoes'] },
 ]
 
-const DIVIDERS_BEFORE = new Set(['Pedidos','Diretório','Relatórios','Configurações','Planeamento','Equipas','Chat'])
+const DIVIDERS_BEFORE = new Set(['Pedidos','Diretório','Relatórios','Configurações','Planeamento','Equipas','Chat','Reservas'])
 
 // ─── Sub-navegação ─────────────────────────────────────────────────────────
 export const SUB_NAV: Record<string, { label: string; href: string }[]> = {
