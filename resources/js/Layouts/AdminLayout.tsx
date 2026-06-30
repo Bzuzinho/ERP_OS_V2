@@ -21,7 +21,7 @@ const NAV: NavItem[] = [
   { label: 'Início',        href: '/',            icon: LayoutDashboard, group: ['/', '/dashboard'] },
   { label: 'Pedidos',       href: '/pedidos',     icon: FileText,        group: ['/pedidos'] },
   { label: 'Tarefas',       href: '/tarefas',     icon: CheckSquare,     group: ['/tarefas'] },
-  { label: 'Agenda',        href: '/agenda',      icon: CalendarDays,    group: ['/agenda', '/reservas', '/espacos'] },
+  { label: 'Agenda',        href: '/agenda',      icon: CalendarDays,    group: ['/agenda', '/reservas'] },
   { label: 'Planeamento',   href: '/planeamento', icon: ClipboardList,   group: ['/planeamento'] },
   { label: 'Diretório',      href: '/pessoas',     icon: Users,           group: ['/pessoas', '/entidades', '/municipes', '/rh'] },
   { label: 'Equipas',        href: '/equipas',     icon: Users2,          group: ['/equipas'] },
@@ -36,9 +36,8 @@ const DIVIDERS_BEFORE = new Set(['Pedidos','Diretório','Relatórios','Configura
 
 // ─── Sub-navegação ─────────────────────────────────────────────────────────
 export const SUB_NAV: Record<string, { label: string; href: string }[]> = {
-  '/agenda':    [{ label:'Agenda', href:'/agenda' }, { label:'Reservas', href:'/reservas' }, { label:'Espaços', href:'/espacos' }],
-  '/reservas':  [{ label:'Agenda', href:'/agenda' }, { label:'Reservas', href:'/reservas' }, { label:'Espaços', href:'/espacos' }],
-  '/espacos':   [{ label:'Agenda', href:'/agenda' }, { label:'Reservas', href:'/reservas' }, { label:'Espaços', href:'/espacos' }],
+  '/agenda':    [{ label:'Agenda', href:'/agenda' }, { label:'Reservas', href:'/reservas' }],
+  '/reservas':  [{ label:'Agenda', href:'/agenda' }, { label:'Reservas', href:'/reservas' }],
 
   '/pessoas':   [{ label:'Pessoas', href:'/pessoas' }, { label:'Entidades', href:'/entidades' }],
   '/entidades': [{ label:'Pessoas', href:'/pessoas' }, { label:'Entidades', href:'/entidades' }],
@@ -58,11 +57,11 @@ export const SUB_NAV: Record<string, { label: string; href: string }[]> = {
   '/planeamento/agenda':      [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
   '/planeamento/requisicoes': [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
 
-  '/configuracoes':               [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
-  '/configuracoes/perfis':        [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
-  '/configuracoes/permissoes':    [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
-  '/configuracoes/tipos-pessoa':  [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
-  '/configuracoes/espacos':       [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes':               [{ label:'Instituição', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes/perfis':        [{ label:'Instituição', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes/permissoes':    [{ label:'Instituição', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes/tipos-pessoa':  [{ label:'Instituição', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes/espacos':       [{ label:'Instituição', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
 }
 
 export function SubNav() {
@@ -319,7 +318,7 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
     const second = pathname.split('/').filter(Boolean)[1]
     const SUB_NAV: Record<string, { label: string; href: string }[]> = {
       '/configuracoes': [
-        { label: 'Geral',        href: '/configuracoes' },
+        { label: 'Instituição',  href: '/configuracoes' },
         { label: 'Permissões',   href: '/configuracoes/permissoes' },
         { label: 'Espaços',      href: '/configuracoes/espacos' },
       ],
@@ -345,17 +344,10 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
       '/agenda': [
         { label: 'Agenda',   href: '/agenda' },
         { label: 'Reservas', href: '/reservas' },
-        { label: 'Espaços',  href: '/espacos' },
       ],
       '/reservas': [
         { label: 'Agenda',   href: '/agenda' },
         { label: 'Reservas', href: '/reservas' },
-        { label: 'Espaços',  href: '/espacos' },
-      ],
-      '/espacos': [
-        { label: 'Agenda',   href: '/agenda' },
-        { label: 'Reservas', href: '/reservas' },
-        { label: 'Espaços',  href: '/espacos' },
       ],
     }
     let key = base

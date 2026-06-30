@@ -181,8 +181,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/reservas/{reservation}/escalar',                  [ReservationController::class, 'escalate'])->name('reservations.escalate');
     Route::delete('/reservas/{reservation}',                        [ReservationController::class, 'destroy'])->name('reservations.destroy');
 
-    // Espaços (vista pública)
-    Route::get('/espacos',                                          [SpaceController::class, 'index'])->name('spaces.index');
+    // Redirecionar /espacos para gestão em Configurações
+    Route::get('/espacos', fn() => redirect('/configuracoes/espacos'))->name('spaces.index');
 
     // Espaços (gestão em Configurações)
     Route::get('/configuracoes/espacos',                            [SpaceController::class, 'settingsIndex'])->name('settings.spaces');
