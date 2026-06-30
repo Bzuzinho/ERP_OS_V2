@@ -178,13 +178,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/reservas/{reservation}',                           [ReservationController::class, 'show'])->name('reservations.show');
     Route::post('/reservas/{reservation}/aprovar',                  [ReservationController::class, 'approve'])->name('reservations.approve');
     Route::post('/reservas/{reservation}/rejeitar',                 [ReservationController::class, 'reject'])->name('reservations.reject');
+    Route::post('/reservas/{reservation}/escalar',                  [ReservationController::class, 'escalate'])->name('reservations.escalate');
     Route::delete('/reservas/{reservation}',                        [ReservationController::class, 'destroy'])->name('reservations.destroy');
 
-    // Espaços
+    // Espaços (vista pública)
     Route::get('/espacos',                                          [SpaceController::class, 'index'])->name('spaces.index');
-    Route::post('/espacos',                                         [SpaceController::class, 'store'])->name('spaces.store');
-    Route::patch('/espacos/{space}',                                [SpaceController::class, 'update'])->name('spaces.update');
-    Route::delete('/espacos/{space}',                               [SpaceController::class, 'destroy'])->name('spaces.destroy');
+
+    // Espaços (gestão em Configurações)
+    Route::get('/configuracoes/espacos',                            [SpaceController::class, 'settingsIndex'])->name('settings.spaces');
+    Route::post('/configuracoes/espacos',                           [SpaceController::class, 'store'])->name('spaces.store');
+    Route::patch('/configuracoes/espacos/{space}',                  [SpaceController::class, 'update'])->name('spaces.update');
+    Route::delete('/configuracoes/espacos/{space}',                 [SpaceController::class, 'destroy'])->name('spaces.destroy');
 
     // Documentos
     Route::get('/documentos',                                       [DocumentController::class, 'index'])->name('documents.index');

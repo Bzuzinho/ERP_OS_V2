@@ -100,6 +100,7 @@ export default function PlaneamentoShow({
     starts_at:'',
     ends_at:  '',
     purpose:  '',
+    plan_id:  plan.id,  // liga a reserva a este plano
   })
 
   function savePlan(e: React.FormEvent) {
@@ -452,17 +453,30 @@ export default function PlaneamentoShow({
                 <p className="px-4 py-5 text-xs text-gray-400 text-center">Sem requisições pendentes neste plano.</p>
               ) : (
                 <div className="divide-y divide-gray-50">
-                  {spaceReservations.map((r: any) => (
-                    <Link key={`res-${r.id}`} href={`/reservas/${r.id}`}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group">
-                      <MapPin size={13} className="text-yellow-500 flex-shrink-0"/>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-800 truncate group-hover:text-primary-700">{r.title}</p>
-                        <p className="text-xs text-gray-400">{r.space?.name} · {new Date(r.starts_at).toLocaleDateString('pt-PT', { day:'2-digit', month:'short' })}</p>
-                      </div>
-                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 flex-shrink-0">Espaço</span>
-                    </Link>
-                  ))}
+                  {spaceReservations.map((r: any) => {
+                    const resColors: Record<string,string> = {
+                      pendente:  'bg-yellow-100 text-yellow-700',
+                      aprovada:  'bg-green-100 text-green-700',
+                      rejeitada: 'bg-red-100 text-red-700',
+                      cancelada: 'bg-gray-100 text-gray-500',
+                    }
+                    const resLabels: Record<string,string> = {
+                      pendente:'Pendente', aprovada:'Aprovada', rejeitada:'Rejeitada', cancelada:'Cancelada',
+                    }
+                    return (
+                      <Link key={`res-${r.id}`} href={`/reservas/${r.id}`}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group">
+                        <MapPin size={13} className="text-yellow-500 flex-shrink-0"/>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-800 truncate group-hover:text-primary-700">{r.title}</p>
+                          <p className="text-xs text-gray-400">{r.space?.name} · {new Date(r.starts_at).toLocaleDateString('pt-PT', { day:'2-digit', month:'short' })}</p>
+                        </div>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${resColors[r.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                          {resLabels[r.status] ?? r.status}
+                        </span>
+                      </Link>
+                    )
+                  })}
                   {tasksPendingVal.map((t: any) => (
                     <Link key={`task-${t.id}`} href={`/tarefas/${t.id}`}
                       className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group">
@@ -511,20 +525,81 @@ export default function PlaneamentoShow({
                     <div key={`alloc-${a.id}`} className="flex items-center gap-3 px-4 py-2.5">
                       <Package size={13} className="text-orange-400 flex-shrink-0"/>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-800 truncate">{a.item?.name ?? '—'} × {a.quantity}</p>
-                        {a.task && <p className="text-xs text-gray-400 truncate">{a.task.title}</p>}
+                        <p className="text-xs font-medium text-gray-800 truncate">{a.item?.name ?? 'Material'}</p>
+                        <p className="text-xs text-gray-400">{a.quantity} {a.item?.unit ?? 'un'}{a.task ? ` · ${a.task.title}` : ''}</p>
                       </div>
-                      <span className={clsx('text-xs px-1.5 py-0.5 rounded-full flex-shrink-0', ALLOC_STATUS_COLORS[a.status] ?? 'bg-gray-100 text-gray-500')}>
-                        {a.status?.replace('_',' ')}
-                      </span>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 flex-shrink-0">Recurso</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-          </div>
-        </div>
+          </div>{/* col-span-2 */}
+
+          {/* ── Sidebar direita ──────────────────────────────────────────── */}
+          <div className="space-y-4">
+
+            {/* Info */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <h3 className="font-semibold text-sm text-gray-700 mb-3">Informação</h3>
+              <dl className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Estado</dt>
+                  <dd><span className={`px-2 py-0.5 rounded-full font-medium ${PLAN_STATUS_COLORS[plan.status] ?? 'bg-gray-100 text-gray-600'}`}>{plan.status}</span></dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Início previsto</dt>
+                  <dd className="text-gray-700">{plan.planned_start ? new Date(plan.planned_start).toLocaleDateString('pt-PT') : '—'}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Fim previsto</dt>
+                  <dd className="text-gray-700">{plan.planned_end ? new Date(plan.planned_end).toLocaleDateString('pt-PT') : '—'}</dd>
+                </div>
+                {plan.responsible && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500">Responsável</dt>
+                    <dd className="text-gray-700">{plan.responsible.name}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Criado em</dt>
+                  <dd className="text-gray-700">{plan.created_at ? new Date(plan.created_at).toLocaleDateString('pt-PT') : '—'}</dd>
+                </div>
+              </dl>
+            </div>
+
+            {/* Progresso */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <h3 className="font-semibold text-sm text-gray-700 mb-3">Progresso de Tarefas</h3>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                  <div className="bg-primary-500 h-2 rounded-full transition-all" style={{ width: `${plan.progress ?? 0}%` }}/>
+                </div>
+                <span className="text-xs font-semibold text-gray-600">{plan.progress ?? 0}%</span>
+              </div>
+              <p className="text-xs text-gray-400">{plan.tasks_by_status?.completed ?? 0} de {(plan.tasks_by_status ? Object.values(plan.tasks_by_status).reduce((a:number,b:any) => a+b,0) : 0)} concluídas</p>
+            </div>
+
+            {/* Descrição */}
+            {plan.description && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <h3 className="font-semibold text-sm text-gray-700 mb-2">Descrição</h3>
+                <p className="text-xs text-gray-600 whitespace-pre-line">{plan.description}</p>
+              </div>
+            )}
+
+            {/* Zona de perigo */}
+            <div className="bg-white rounded-xl border border-red-100 shadow-sm p-4">
+              <h3 className="font-semibold text-sm text-red-700 mb-3">Zona de Perigo</h3>
+              <button onClick={deletePlan}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium transition-colors">
+                <Trash2 size={13}/> Eliminar Plano
+              </button>
+            </div>
+
+          </div>{/* sidebar */}
+        </div>{/* grid */}
       </div>
     </AdminLayout>
   )

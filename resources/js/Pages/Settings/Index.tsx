@@ -7,6 +7,7 @@ import {
   Building2, Shield, Upload, X, Trash2,
   Check, Palette, Save, Image as ImageIcon,
   ChevronDown, ChevronUp, FileImage,
+  MapPin, Users, Clock, Plus, Pencil, ToggleLeft, ToggleRight, ChevronRight,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -518,29 +519,285 @@ function PerfisSection({
   )
 }
 
-// --- Pagina principal ---
+// ─── Espaços Section ──────────────────────────────────────────────────────────
+const DAYS_PT: Record<string,string> = {
+  monday:'Segunda', tuesday:'Terça', wednesday:'Quarta',
+  thursday:'Quinta', friday:'Sexta', saturday:'Sábado', sunday:'Domingo',
+}
+const DAY_KEYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+
+const SPACE_TYPES = ['Sala de Reunião','Auditório','Salão','Sala Polivalente','Espaço Exterior','Arquivo','Outro']
+function SpaceForm({ space, users, teams, onClose }: {
+  space?: any; users: any[]; teams: any[]; onClose: () => void
+}) {
+  const isEdit = !!space
+  const { data, setData, post, patch, processing, errors, reset } = useForm({
+    name: space?.name ?? '', type: space?.type ?? SPACE_TYPES[0],
+    description: space?.description ?? '', capacity: space?.capacity ?? '',
+    location: space?.location ?? '', color: space?.color ?? '',
+    is_active: space?.is_active ?? true, is_public: space?.is_public ?? false,
+    responsible_user_id: space?.responsible_user?.id ?? '',
+    responsible_team_id: space?.responsible_team?.id ?? '',
+    requirements: space?.requirements ?? '', notes: space?.notes ?? '',
+    schedule: (space?.schedule ?? {}) as Record<string, { open: string; close: string; closed?: boolean }>,
+  })
+  const toggleDay = (day: string) => {
+    const s = { ...(data.schedule as any) }
+    s[day] = s[day]?.closed === false || !s[day]
+      ? { open: '09:00', close: '18:00', closed: false }
+      : { ...s[day], closed: true }
+    setData('schedule', s)
+  }
+  const setDayTime = (day: string, field: 'open' | 'close', val: string) => {
+    const s = { ...(data.schedule as any) }
+    s[day] = { ...(s[day] ?? { open: '09:00', close: '18:00' }), [field]: val, closed: false }
+    setData('schedule', s)
+  }
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    isEdit
+      ? patch(`/configuracoes/espacos/${space.id}`, { onSuccess: onClose })
+      : post('/configuracoes/espacos', { onSuccess: () => { reset(); onClose() } })
+  }
+  const inp = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-800">{isEdit ? 'Editar Espaço' : 'Novo Espaço'}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
+        </div>
+        <form onSubmit={submit} className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Nome *</label>
+              <input value={data.name} onChange={e => setData('name', e.target.value)} className={inp} required/>
+              {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Tipo</label>
+              <select value={data.type} onChange={e => setData('type', e.target.value)} className={inp}>
+                {SPACE_TYPES.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Localização</label>
+              <input value={data.location} onChange={e => setData('location', e.target.value)} className={inp}/>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Capacidade</label>
+              <input type="number" value={data.capacity} onChange={e => setData('capacity', e.target.value)} className={inp} min={1}/>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">Descrição</label>
+            <textarea value={data.description} onChange={e => setData('description', e.target.value)} rows={2} className={inp}/>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Responsável (pessoa)</label>
+              <select value={data.responsible_user_id} onChange={e => setData('responsible_user_id', e.target.value)} className={inp}>
+                <option value="">Sem responsável</option>
+                {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Equipa responsável</label>
+              <select value={data.responsible_team_id} onChange={e => setData('responsible_team_id', e.target.value)} className={inp}>
+                <option value="">Sem equipa</option>
+                {teams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-2 block">Horário</label>
+            <div className="space-y-2 bg-gray-50 rounded-xl p-3">
+              {DAY_KEYS.map(day => {
+                const sc = (data.schedule as any)[day]
+                const open = sc && !sc.closed
+                return (
+                  <div key={day} className="flex items-center gap-3">
+                    <button type="button" onClick={() => toggleDay(day)}
+                      className={clsx('text-xs font-medium w-24 text-left rounded px-2 py-1', open ? 'text-primary-700 bg-primary-50' : 'text-gray-400 bg-white border border-gray-200')}>
+                      {DAYS_PT[day]}
+                    </button>
+                    {open ? (
+                      <>
+                        <input type="time" value={sc?.open ?? '09:00'} onChange={e => setDayTime(day,'open',e.target.value)} className="border border-gray-200 rounded px-2 py-1 text-xs w-24"/>
+                        <span className="text-xs text-gray-400">ate</span>
+                        <input type="time" value={sc?.close ?? '18:00'} onChange={e => setDayTime(day,'close',e.target.value)} className="border border-gray-200 rounded px-2 py-1 text-xs w-24"/>
+                      </>
+                    ) : <span className="text-xs text-gray-400">Fechado</span>}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Requisitos</label>
+              <textarea value={data.requirements} onChange={e => setData('requirements', e.target.value)} rows={3} className={inp} placeholder="Ex: Projetor, AC"/>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Notas internas</label>
+              <textarea value={data.notes} onChange={e => setData('notes', e.target.value)} rows={3} className={inp}/>
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={data.is_active} onChange={e => setData('is_active', e.target.checked)} className="rounded"/> Ativo
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={data.is_public} onChange={e => setData('is_public', e.target.checked)} className="rounded"/> Publico
+            </label>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={processing}
+              className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium disabled:opacity-60">
+              {processing ? 'A guardar...' : isEdit ? 'Atualizar' : 'Criar Espaco'}
+            </button>
+            <button type="button" onClick={onClose} className="px-5 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function EspacosSection({ spaces, users, teams }: { spaces: any[]; users: any[]; teams: any[] }) {
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing]   = useState<any>(null)
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const deleteSpace = (id: number) => {
+    if (!confirm('Remover este espaco?')) return
+    router.delete(`/configuracoes/espacos/${id}`)
+  }
+  const toggleActive = (space: any) => {
+    router.patch(`/configuracoes/espacos/${space.id}`, { is_active: !space.is_active })
+  }
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-gray-800">Gestao de Espacos</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Crie e configure os espacos disponiveis para reserva</p>
+        </div>
+        <button onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium">
+          <Plus size={14}/> Novo Espaco
+        </button>
+      </div>
+      {spaces.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
+          <MapPin size={32} className="mx-auto text-gray-300 mb-2"/>
+          <p className="text-sm text-gray-500">Nenhum espaco criado ainda</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {spaces.map((sp: any) => (
+            <div key={sp.id} className={clsx('bg-white rounded-xl border transition-all', expanded === sp.id ? 'border-primary-200 shadow-sm' : 'border-gray-100')}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm text-gray-800">{sp.name}</span>
+                    <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{sp.type}</span>
+                    {!sp.is_active && <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Inativo</span>}
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                    {sp.location && <span className="text-xs text-gray-400">{sp.location}</span>}
+                    {sp.capacity && <span className="text-xs text-gray-400">{sp.capacity} pessoas</span>}
+                    {sp.responsible_user && <span className="text-xs text-gray-400">{sp.responsible_user.name}</span>}
+                    {sp.responsible_team && <span className="text-xs text-gray-400">{sp.responsible_team.name}</span>}
+                    <span className="text-xs text-gray-300">{sp.reservations_count} reserva(s)</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => toggleActive(sp)} title={sp.is_active ? 'Desativar' : 'Ativar'}
+                    className={clsx('p-1.5 rounded-lg', sp.is_active ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-50')}>
+                    {sp.is_active ? <ToggleRight size={16}/> : <ToggleLeft size={16}/>}
+                  </button>
+                  <button onClick={() => { setEditing(sp); setShowForm(false) }} title="Editar"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50">
+                    <Pencil size={14}/>
+                  </button>
+                  <button onClick={() => deleteSpace(sp.id)} title="Remover"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50">
+                    <Trash2 size={14}/>
+                  </button>
+                  <button onClick={() => setExpanded(expanded === sp.id ? null : sp.id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-50">
+                    <ChevronRight size={14} className={clsx('transition-transform', expanded === sp.id && 'rotate-90')}/>
+                  </button>
+                </div>
+              </div>
+              {expanded === sp.id && (
+                <div className="px-4 pb-4 pt-1 border-t border-gray-50 grid grid-cols-2 gap-4">
+                  {sp.requirements && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Requisitos</p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{sp.requirements}</p>
+                    </div>
+                  )}
+                  {sp.notes && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Notas</p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{sp.notes}</p>
+                    </div>
+                  )}
+                  {sp.schedule && Object.keys(sp.schedule).length > 0 && (
+                    <div className="col-span-2">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Horario</p>
+                      <div className="flex flex-wrap gap-2">
+                        {DAY_KEYS.map(day => {
+                          const s = sp.schedule[day]
+                          if (!s) return null
+                          return (
+                            <span key={day} className={clsx('text-xs px-2 py-1 rounded-lg',
+                              s.closed ? 'bg-gray-50 text-gray-400' : 'bg-primary-50 text-primary-700')}>
+                              {DAYS_PT[day]}: {s.closed ? 'Fechado' : `${s.open}-${s.close}`}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {(showForm || editing) && (
+        <SpaceForm space={editing ?? undefined} users={users} teams={teams}
+          onClose={() => { setShowForm(false); setEditing(null) }}/>
+      )}
+    </div>
+  )
+}
+
 export default function SettingsIndex({
   section, institution, rolePermissions, modules, roles,
+  spaces, users, teams,
 }: {
-  section: 'geral' | 'perfis'
+  section: 'geral' | 'perfis' | 'espacos'
   institution: any
   rolePermissions: PermMatrix
   modules: Record<string,string>
   roles: string[]
+  spaces?: any[]
+  users?: any[]
+  teams?: any[]
 }) {
   return (
     <>
       <Head title="Configuracoes"/>
       <AdminLayout title="Configuracoes">
         <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
-          {section === 'geral'  && <GeralSection org={institution}/>}
-          {section === 'perfis' && (
-            <PerfisSection
-              matrix={rolePermissions}
-              modules={modules}
-              roles={roles}
-            />
-          )}
+          {section === 'geral'   && <GeralSection org={institution}/>}
+          {section === 'perfis'  && <PerfisSection matrix={rolePermissions} modules={modules} roles={roles}/>}
+          {section === 'espacos' && <EspacosSection spaces={spaces ?? []} users={users ?? []} teams={teams ?? []}/>}
         </div>
       </AdminLayout>
     </>

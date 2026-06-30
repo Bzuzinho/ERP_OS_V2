@@ -60,6 +60,7 @@ class ReservationController extends Controller
 
         $data['organization_id'] = 1;
         $data['user_id']         = auth()->id();
+        $data['plan_id']         = $request->input('plan_id'); // nullable
         $reservation = SpaceReservation::create($data);
 
         return back()->with('message', 'Reserva criada e aguarda aprovação.');
@@ -67,7 +68,15 @@ class ReservationController extends Controller
 
     public function show(SpaceReservation $reservation)
     {
-        $reservation->load(['space','contact','user','reviewer','event','tasks.assignee']);
+        $reservation->load([
+            'space.responsibleUser:id,name',
+            'space.responsibleTeam:id,name',
+            'contact','user','reviewer','escalatedTo',
+            'plan:id,title',
+            'event','tasks.assignee',
+        ]);
+
+        $users = \App\Models\User::where('is_active', true)->orderBy('name')->get(['id','name']);
 
         return Inertia::render('Reservations/Show', [
             'reservation' => [
@@ -79,11 +88,25 @@ class ReservationController extends Controller
                 'starts_at'          => $reservation->starts_at,
                 'ends_at'            => $reservation->ends_at,
                 'expected_attendees' => $reservation->expected_attendees,
-                'space'              => $reservation->space ? ['id'=>$reservation->space->id,'name'=>$reservation->space->name,'location'=>$reservation->space->location ?? null] : null,
+                'space'              => $reservation->space ? [
+                    'id'               => $reservation->space->id,
+                    'name'             => $reservation->space->name,
+                    'location'         => $reservation->space->location ?? null,
+                    'responsible_user' => $reservation->space->responsibleUser
+                        ? ['id'=>$reservation->space->responsibleUser->id,'name'=>$reservation->space->responsibleUser->name]
+                        : null,
+                    'responsible_team' => $reservation->space->responsibleTeam
+                        ? ['id'=>$reservation->space->responsibleTeam->id,'name'=>$reservation->space->responsibleTeam->name]
+                        : null,
+                ] : null,
                 'contact'            => $reservation->contact ? ['id'=>$reservation->contact->id,'name'=>$reservation->contact->name,'email'=>$reservation->contact->email ?? null] : null,
                 'user'               => $reservation->user ? ['id'=>$reservation->user->id,'name'=>$reservation->user->name] : null,
                 'reviewer'           => $reservation->reviewer ? ['id'=>$reservation->reviewer->id,'name'=>$reservation->reviewer->name] : null,
                 'reviewed_at'        => $reservation->reviewed_at,
+                'escalated_to'       => $reservation->escalatedTo ? ['id'=>$reservation->escalatedTo->id,'name'=>$reservation->escalatedTo->name] : null,
+                'escalated_at'       => $reservation->escalated_at,
+                'escalation_notes'   => $reservation->escalation_notes,
+                'plan'               => $reservation->plan ? ['id'=>$reservation->plan->id,'title'=>$reservation->plan->title] : null,
                 'event'              => $reservation->event ? ['id'=>$reservation->event->id,'title'=>$reservation->event->title] : null,
                 'tasks'              => $reservation->tasks->map(fn($t) => [
                     'id'       => $t->id,
@@ -93,6 +116,8 @@ class ReservationController extends Controller
                 ]),
                 'created_at'         => $reservation->created_at,
             ],
+            'users' => $users,
+            'currentUser' => ['id' => auth()->id()],
         ]);
     }
 
@@ -142,6 +167,23 @@ class ReservationController extends Controller
             'reviewed_at'      => now(),
         ]);
         return back()->with('message', 'Reserva rejeitada.');
+    }
+
+    /** POST /reservas/{reservation}/escalar */
+    public function escalate(Request $request, SpaceReservation $reservation)
+    {
+        $data = $request->validate([
+            'escalated_to_id'  => 'required|exists:users,id',
+            'escalation_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $reservation->update([
+            'escalated_to_id'  => $data['escalated_to_id'],
+            'escalated_at'     => now(),
+            'escalation_notes' => $data['escalation_notes'] ?? null,
+        ]);
+
+        return back()->with('message', 'Pedido de aprovação escalado.');
     }
 
     public function destroy(SpaceReservation $reservation)

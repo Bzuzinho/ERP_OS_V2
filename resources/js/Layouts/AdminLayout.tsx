@@ -22,7 +22,6 @@ const NAV: NavItem[] = [
   { label: 'Pedidos',       href: '/pedidos',     icon: FileText,        group: ['/pedidos'] },
   { label: 'Tarefas',       href: '/tarefas',     icon: CheckSquare,     group: ['/tarefas'] },
   { label: 'Agenda',        href: '/agenda',      icon: CalendarDays,    group: ['/agenda', '/reservas', '/espacos'] },
-  { label: 'Reservas',      href: '/reservas',    icon: Building2,       group: ['/reservas', '/espacos'] },
   { label: 'Planeamento',   href: '/planeamento', icon: ClipboardList,   group: ['/planeamento'] },
   { label: 'Diretório',      href: '/pessoas',     icon: Users,           group: ['/pessoas', '/entidades', '/municipes', '/rh'] },
   { label: 'Equipas',        href: '/equipas',     icon: Users2,          group: ['/equipas'] },
@@ -30,10 +29,10 @@ const NAV: NavItem[] = [
   { label: 'Documentos',    href: '/documentos',  icon: BookOpen,        group: ['/documentos', '/atas'] },
   { label: 'Chat',          href: '/chat',        icon: MessageCircle,   group: ['/chat'] },
   { label: 'Relatórios',    href: '/relatorios',  icon: BarChart3,       group: ['/relatorios'] },
-  { label: 'Configurações', href: '/configuracoes', icon: Settings,      group: ['/configuracoes', '/perfil', '/configuracoes/utilizadores', '/configuracoes/permissoes'] },
+  { label: 'Configurações', href: '/configuracoes', icon: Settings,      group: ['/configuracoes', '/perfil', '/configuracoes/utilizadores', '/configuracoes/permissoes', '/configuracoes/espacos'] },
 ]
 
-const DIVIDERS_BEFORE = new Set(['Pedidos','Diretório','Relatórios','Configurações','Planeamento','Equipas','Chat','Reservas'])
+const DIVIDERS_BEFORE = new Set(['Pedidos','Diretório','Relatórios','Configurações','Planeamento','Equipas','Chat'])
 
 // ─── Sub-navegação ─────────────────────────────────────────────────────────
 export const SUB_NAV: Record<string, { label: string; href: string }[]> = {
@@ -59,10 +58,11 @@ export const SUB_NAV: Record<string, { label: string; href: string }[]> = {
   '/planeamento/agenda':      [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
   '/planeamento/requisicoes': [{ label:'Planos', href:'/planeamento' }, { label:'Agenda', href:'/planeamento/agenda' }, { label:'Requisições', href:'/planeamento/requisicoes' }],
 
-  '/configuracoes':               [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
-  '/configuracoes/perfis':        [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
-  '/configuracoes/permissoes':    [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
-  '/configuracoes/tipos-pessoa':  [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }],
+  '/configuracoes':               [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes/perfis':        [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes/permissoes':    [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes/tipos-pessoa':  [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
+  '/configuracoes/espacos':       [{ label:'Geral', href:'/configuracoes' }, { label:'Permissões', href:'/configuracoes/permissoes' }, { label:'Espaços', href:'/configuracoes/espacos' }],
 }
 
 export function SubNav() {
@@ -321,21 +321,46 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
       '/configuracoes': [
         { label: 'Geral',        href: '/configuracoes' },
         { label: 'Permissões',   href: '/configuracoes/permissoes' },
+        { label: 'Espaços',      href: '/configuracoes/espacos' },
       ],
       '/planeamento': [
-        { label: 'Planos',     href: '/planeamento' },
-        { label: 'Agenda',     href: '/planeamento/agenda' },
+        { label: 'Planos',      href: '/planeamento' },
+        { label: 'Agenda',      href: '/planeamento/agenda' },
         { label: 'Requisições', href: '/planeamento/requisicoes' },
       ],
       '/inventario': [
-        { label: 'Catálogo',   href: '/inventario' },
-        { label: 'Stock',      href: '/inventario/stock' },
+        { label: 'Catálogo',    href: '/inventario' },
+        { label: 'Stock',       href: '/inventario/stock' },
         { label: 'Empréstimos', href: '/inventario/emprestimos' },
         { label: 'Requisições', href: '/inventario/requisicoes' },
       ],
+      '/pessoas': [
+        { label: 'Pessoas',   href: '/pessoas' },
+        { label: 'Entidades', href: '/entidades' },
+      ],
+      '/entidades': [
+        { label: 'Pessoas',   href: '/pessoas' },
+        { label: 'Entidades', href: '/entidades' },
+      ],
+      '/agenda': [
+        { label: 'Agenda',   href: '/agenda' },
+        { label: 'Reservas', href: '/reservas' },
+        { label: 'Espaços',  href: '/espacos' },
+      ],
+      '/reservas': [
+        { label: 'Agenda',   href: '/agenda' },
+        { label: 'Reservas', href: '/reservas' },
+        { label: 'Espaços',  href: '/espacos' },
+      ],
+      '/espacos': [
+        { label: 'Agenda',   href: '/agenda' },
+        { label: 'Reservas', href: '/reservas' },
+        { label: 'Espaços',  href: '/espacos' },
+      ],
     }
     let key = base
-    if (base === '/inventario' && second) key = '/inventario'
+    if (base === '/inventario'   && second) key = '/inventario'
+    if (base === '/configuracoes' && second) key = '/configuracoes'
     return SUB_NAV[key] ?? []
   })()
 
@@ -732,38 +757,27 @@ export default function AdminLayout({ children, title, showSubNav = true }: Prop
 
         {/* Sub-navigation */}
         {showSubNav && subItems.length > 0 && (
-          <div className="h-10 border-b border-gray-200 flex items-center px-4 gap-1 flex-shrink-0 bg-white overflow-x-auto">
-            {subItems.map(si => {
-              const isActive = pathname === si.href || pathname.startsWith(si.href + '/')
+          <div className="h-10 border-b border-gray-200 flex items-center px-4 gap-1 flex-shrink-0 bg-white overflow-x-auto scrollbar-none">
+            {subItems.map(item => {
+              const active = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
-                <Link key={si.href} href={si.href}
+                <Link key={item.href} href={item.href}
                   className={clsx(
-                    'px-3 py-1 rounded-md text-sm font-medium whitespace-nowrap transition-colors',
-                    isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  )}>
-                  {si.label}
+                    'px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-colors',
+                    active
+                      ? 'text-white'
+                      : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+                  )}
+                  style={active ? { backgroundColor: 'var(--primary-600)' } : {}}>
+                  {item.label}
                 </Link>
               )
             })}
           </div>
         )}
 
-        {/* Flash message */}
-        {flash?.message && (
-          <div className="mx-4 mt-3 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-700">
-            <CheckCircle size={15} className="flex-shrink-0"/>
-            {flash.message}
-          </div>
-        )}
-        {flash?.error && (
-          <div className="mx-4 mt-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
-            <AlertCircle size={15} className="flex-shrink-0"/>
-            {flash.error}
-          </div>
-        )}
-
         {/* Page content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto min-w-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
           {children}
         </main>
       </div>

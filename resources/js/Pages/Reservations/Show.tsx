@@ -3,7 +3,8 @@ import { Head, useForm, router } from '@inertiajs/react'
 import AdminLayout from '@/Layouts/AdminLayout'
 import {
   Calendar, MapPin, User, Clock, Users, Check, X,
-  ChevronRight, ClipboardList, ExternalLink, AlertCircle, Trash2
+  ChevronRight, ClipboardList, ExternalLink, AlertCircle, Trash2,
+  ArrowUpRight, Shield, BookOpen,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -43,9 +44,11 @@ function duration(starts: string, ends: string) {
   return m > 0 ? `${h}h ${m}min` : `${h}h`
 }
 
-export default function ReservationsShow({ reservation }: any) {
-  const [rejecting, setRejecting] = useState(false)
-  const rejectForm = useForm({ rejection_reason: '' })
+export default function ReservationsShow({ reservation, users, currentUser }: any) {
+  const [rejecting,  setRejecting]  = useState(false)
+  const [escalating, setEscalating] = useState(false)
+  const rejectForm   = useForm({ rejection_reason: '' })
+  const escalateForm = useForm({ escalated_to_id: '', escalation_notes: '' })
 
   function approve() {
     if (confirm('Aprovar esta reserva?'))
@@ -58,6 +61,12 @@ export default function ReservationsShow({ reservation }: any) {
     })
   }
 
+  function escalate() {
+    escalateForm.post(`/reservas/${reservation.id}/escalar`, {
+      onSuccess: () => setEscalating(false),
+    })
+  }
+
   function destroy() {
     if (confirm('Cancelar esta reserva? Esta acção não pode ser desfeita.')) {
       router.delete(`/reservas/${reservation.id}`)
@@ -66,6 +75,12 @@ export default function ReservationsShow({ reservation }: any) {
 
   const isPending  = reservation.status === 'pendente'
   const isApproved = reservation.status === 'aprovada'
+
+  // Is current user the space responsible?
+  const isResponsible = reservation.space?.responsible_user?.id === currentUser?.id
+  const isEscalatedTo  = reservation.escalated_to?.id === currentUser?.id
+  const canAction      = isPending && (isResponsible || isEscalatedTo)
+  const canEscalate    = isPending && isResponsible && !reservation.escalated_to
 
   return (
     <AdminLayout title={reservation.title}>
@@ -88,13 +103,39 @@ export default function ReservationsShow({ reservation }: any) {
                 <span className={clsx('px-3 py-1 rounded-full text-sm font-medium border', statusColors[reservation.status])}>
                   {statusLabels[reservation.status]}
                 </span>
+                {reservation.plan && (
+                  <a href={`/planeamento/${reservation.plan.id}`}
+                    className="flex items-center gap-1 text-xs text-primary-600 bg-primary-50 px-2 py-1 rounded-full hover:bg-primary-100">
+                    <BookOpen size={10}/> {reservation.plan.title}
+                  </a>
+                )}
               </div>
               {reservation.purpose && (
                 <p className="text-gray-500 text-sm mt-1">{reservation.purpose}</p>
               )}
             </div>
-            {isPending && (
-              <div className="flex gap-2 flex-shrink-0">
+            {/* Action buttons — shown to responsible or escalated user */}
+            {canAction && (
+              <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                <button onClick={approve}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+                  <Check size={15}/> Aprovar
+                </button>
+                <button onClick={() => setRejecting(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium">
+                  <X size={15}/> Rejeitar
+                </button>
+                {canEscalate && (
+                  <button onClick={() => setEscalating(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 border border-orange-200 text-orange-600 hover:bg-orange-50 rounded-lg text-sm font-medium">
+                    <ArrowUpRight size={15}/> Escalar
+                  </button>
+                )}
+              </div>
+            )}
+            {/* Admin can always see buttons if pending */}
+            {isPending && !canAction && (
+              <div className="flex gap-2 flex-shrink-0 flex-wrap">
                 <button onClick={approve}
                   className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
                   <Check size={15}/> Aprovar
@@ -106,6 +147,68 @@ export default function ReservationsShow({ reservation }: any) {
               </div>
             )}
           </div>
+
+          {/* Escalation info */}
+          {reservation.escalated_to && (
+            <div className="mt-4 p-3 bg-orange-50 border border-orange-100 rounded-lg flex gap-2">
+              <ArrowUpRight size={16} className="text-orange-500 flex-shrink-0 mt-0.5"/>
+              <div>
+                <p className="text-sm font-medium text-orange-700">
+                  Aprovação escalada para {reservation.escalated_to.name}
+                </p>
+                {reservation.escalation_notes && (
+                  <p className="text-sm text-orange-600 mt-0.5">{reservation.escalation_notes}</p>
+                )}
+                {reservation.escalated_at && (
+                  <p className="text-xs text-orange-400 mt-0.5">
+                    {fmt(reservation.escalated_at, { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Escalate inline form */}
+          {escalating && (
+            <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+              <p className="text-sm font-medium text-orange-800 mb-3 flex items-center gap-1.5">
+                <ArrowUpRight size={14}/> Escalar aprovação para superior
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Escalar para *</label>
+                  <select value={escalateForm.data.escalated_to_id}
+                    onChange={e => escalateForm.setData('escalated_to_id', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-400">
+                    <option value="">Selecionar utilizador</option>
+                    {users?.filter((u: any) => u.id !== currentUser?.id).map((u: any) => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </select>
+                  {escalateForm.errors.escalated_to_id && (
+                    <p className="text-xs text-red-600 mt-1">{escalateForm.errors.escalated_to_id}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Justificação (opcional)</label>
+                  <textarea value={escalateForm.data.escalation_notes}
+                    onChange={e => escalateForm.setData('escalation_notes', e.target.value)}
+                    rows={2} placeholder="Motivo da escalação..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-400 resize-none"/>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button onClick={escalate} disabled={escalateForm.processing || !escalateForm.data.escalated_to_id}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium disabled:opacity-50">
+                  Confirmar Escalação
+                </button>
+                <button onClick={() => setEscalating(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Rejection reason */}
           {reservation.status === 'rejeitada' && reservation.rejection_reason && (
@@ -224,8 +327,18 @@ export default function ReservationsShow({ reservation }: any) {
                 {reservation.space.location && (
                   <p className="text-sm text-gray-500 mt-0.5">{reservation.space.location}</p>
                 )}
-                <a href="/espacos" className="text-xs text-primary-600 hover:underline mt-2 inline-block">
-                  Ver espaços →
+                {reservation.space.responsible_user && (
+                  <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                    <Shield size={10}/> Responsável: {reservation.space.responsible_user.name}
+                  </p>
+                )}
+                {reservation.space.responsible_team && (
+                  <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                    <Users size={10}/> Equipa: {reservation.space.responsible_team.name}
+                  </p>
+                )}
+                <a href="/configuracoes/espacos" className="text-xs text-primary-600 hover:underline mt-2 inline-block">
+                  Gerir espaços →
                 </a>
               </div>
             )}
@@ -243,9 +356,6 @@ export default function ReservationsShow({ reservation }: any) {
                       {reservation.contact.email}
                     </a>
                   )}
-                  <a href={`/municipes`} className="text-xs text-gray-400 hover:text-primary-600 mt-1 block">
-                    Munícipe →
-                  </a>
                 </div>
               ) : reservation.user ? (
                 <div>

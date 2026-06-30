@@ -98,15 +98,23 @@ class OperationalPlanController extends Controller
             ->filter(fn($t) => $t->validation_status === 'pendente')
             ->values();
 
-        // Space reservations overlapping the plan period and still pending
-        $spaceReservations = ($plan->planned_start && $plan->planned_end)
-            ? SpaceReservation::with(['space','contact','user'])
-                ->where('status', 'pendente')
-                ->where('starts_at', '<=', $plan->planned_end)
-                ->where('ends_at',   '>=', $plan->planned_start)
-                ->orderBy('starts_at')
-                ->get()
-            : collect();
+        // Space reservations linked to this plan (by plan_id) OR overlapping the plan period
+        $spaceReservations = SpaceReservation::with(['space','contact','user'])
+            ->where(function ($q) use ($plan) {
+                // Directly linked reservations (regardless of status)
+                $q->where('plan_id', $plan->id);
+                // OR date-overlap reservations not linked to any plan
+                if ($plan->planned_start && $plan->planned_end) {
+                    $q->orWhere(function ($q2) use ($plan) {
+                        $q2->whereNull('plan_id')
+                           ->where('status', 'pendente')
+                           ->where('starts_at', '<=', $plan->planned_end)
+                           ->where('ends_at',   '>=', $plan->planned_start);
+                    });
+                }
+            })
+            ->orderBy('starts_at')
+            ->get();
 
         // ── Recursos do plano ─────────────────────────────────────────────────
         $taskIds = $plan->tasks->pluck('id');
